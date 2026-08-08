@@ -103,25 +103,27 @@ export default function App() {
           </p>
         </div>
         <div className="header-actions">
-          <button
-            type="button"
-            className="theme-toggle"
-            role="switch"
-            aria-checked={theme === 'dark'}
-            onClick={toggleTheme}
-          >
-            {theme === 'dark' ? 'Dark' : 'Light'}
-          </button>
-          {hasRoster ? (
+          <div className="header-control-row">
             <button
               type="button"
-              className="refresh-button"
-              disabled={loadingProfiles > 0}
-              onClick={refreshProfiles}
+              className="theme-toggle"
+              role="switch"
+              aria-checked={theme === 'dark'}
+              onClick={toggleTheme}
             >
-              {loadingProfiles > 0 ? 'Refreshing' : 'Refresh'}
+              {theme === 'dark' ? 'Dark' : 'Light'}
             </button>
-          ) : null}
+            {hasRoster ? (
+              <button
+                type="button"
+                className="refresh-button"
+                disabled={loadingProfiles > 0}
+                onClick={refreshProfiles}
+              >
+                {loadingProfiles > 0 ? 'Refreshing' : 'Refresh'}
+              </button>
+            ) : null}
+          </div>
           <span className={roster === undefined ? 'status-pill idle' : 'status-pill live'}>
             {roster === undefined ? 'Waiting' : `${roster.players.length}/10`}
           </span>
@@ -215,14 +217,12 @@ function PlayerRow({
   const discordId = getLookupDiscordId(player);
   const profileUrl = profile?.profileUrl ?? player.profileUrl;
   const note =
-    isProfileLoading && discordId !== undefined
-      ? 'Refreshing profile data.'
-      : discordId === undefined
-        ? 'Open their Uma profile once available to scout detailed stats.'
-        : profile === undefined
-          ? 'Profile data has not loaded yet.'
-          : profile?.statsPrivate === true
-            ? 'Stats are private.'
+    discordId === undefined
+      ? 'Open their Uma profile once available to scout detailed stats.'
+      : profile === undefined
+        ? 'Profile data has not loaded yet.'
+        : profile?.statsPrivate === true
+          ? 'Stats are private.'
             : profile?.error !== undefined
               ? profile.error
               : undefined;
@@ -234,6 +234,9 @@ function PlayerRow({
         {profileUrl === undefined ? (
           <span className="player-name-row">
             <span className="player-name">{profile?.displayName ?? player.displayName}</span>
+            {isProfileLoading && discordId !== undefined ? (
+              <span className="player-inline-status">Refreshing</span>
+            ) : null}
             <button type="button" className="expand-button" onClick={onToggleExpanded}>
               {isExpanded ? 'Hide' : 'Details'}
             </button>
@@ -243,6 +246,9 @@ function PlayerRow({
             <a className="player-name" href={profileUrl} target="_blank" rel="noreferrer">
               {profile?.displayName ?? player.displayName}
             </a>
+            {isProfileLoading && discordId !== undefined ? (
+              <span className="player-inline-status">Refreshing</span>
+            ) : null}
             <button type="button" className="expand-button" onClick={onToggleExpanded}>
               {isExpanded ? 'Hide' : 'Details'}
             </button>

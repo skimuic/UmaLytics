@@ -53,6 +53,13 @@ body {
   justify-items: end;
 }
 
+.header-control-row {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
 .theme-toggle,
 .refresh-button {
   background: #ffffff;
@@ -183,7 +190,7 @@ a.player-name:hover {
   align-items: baseline;
   display: grid;
   gap: 6px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   min-width: 0;
 }
 
@@ -198,6 +205,18 @@ a.player-name:hover {
   line-height: 1;
   padding: 4px 7px;
   text-decoration: none;
+}
+
+.player-inline-status {
+  background: #eef2f7;
+  border: 1px solid #d9e0ea;
+  border-radius: 999px;
+  color: #475569;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 4px 6px;
+  white-space: nowrap;
 }
 
 .expand-button:hover {
@@ -434,6 +453,12 @@ a.player-name:hover {
   background: #1f2a3a;
   border-color: #263244;
   color: #d1d5db;
+}
+
+.theme-dark .player-inline-status {
+  background: #172338;
+  border-color: #2b3a50;
+  color: #cbd5e1;
 }
 
 .theme-dark .expand-button:hover {
