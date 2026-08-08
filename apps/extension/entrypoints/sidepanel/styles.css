@@ -288,7 +288,9 @@ a.player-name:hover {
 }
 
 .best-umas {
+  margin-top: 4px;
   min-height: 91px;
+  padding-top: 7px;
 }
 
 .best-umas li {
