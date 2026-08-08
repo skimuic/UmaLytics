@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
 import type {
   PlayerProfileSummary,
+  PlayerTopUmaSummary,
   PrematchPlayer,
   PrematchRoster,
   PrematchTeam,
@@ -304,6 +305,7 @@ function PlayerRow({
             isProfileLoading={isProfileLoading}
             now={now}
           />
+          <ScoutingReport profile={profile} emptyMessage={statsMessage} />
           <BestUmasList
             bestUmas={profile?.bestUmas}
             playerName={player.displayName}
@@ -373,6 +375,72 @@ function ProfileDataStatus({
   return (
     <div className={`profile-data-status ${status.tone}`}>
       <span>{status.label}</span>
+    </div>
+  );
+}
+
+function ScoutingReport({
+  profile,
+  emptyMessage
+}: {
+  profile: PlayerProfileSummary | undefined;
+  emptyMessage?: string;
+}) {
+  if (profile === undefined || profile.statsPrivate === true || profile.error !== undefined) {
+    return (
+      <section className="scouting-report" aria-label="Player scouting report">
+        <p>Scouting Report</p>
+        <span className="section-message">{emptyMessage ?? 'No profile summary available.'}</span>
+      </section>
+    );
+  }
+
+  const comfortPick = profile.topUmas?.[0];
+  const bestPick = profile.bestUmas?.[0];
+
+  return (
+    <section className="scouting-report" aria-label="Player scouting report">
+      <p>Scouting Report</p>
+      <div className="report-grid">
+        <ReportMetric
+          label="Comfort"
+          value={comfortPick?.name ?? '-'}
+          detail={formatUmaLine(comfortPick)}
+        />
+        <ReportMetric
+          label="Best"
+          value={bestPick?.name ?? '-'}
+          detail={formatBestUmaLine(bestPick)}
+        />
+        <ReportMetric
+          label="Sample"
+          value={formatNumber(profile.matches)}
+          detail={formatRecordDetail(profile)}
+        />
+        <ReportMetric
+          label="Pace"
+          value={formatPaceValue(profile.pointsPerGame)}
+          detail={formatWinRateDetail(profile.winRate)}
+        />
+      </div>
+    </section>
+  );
+}
+
+function ReportMetric({
+  label,
+  value,
+  detail
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="report-metric">
+      <span>{label}</span>
+      <strong title={value}>{value}</strong>
+      <small>{detail}</small>
     </div>
   );
 }
@@ -546,6 +614,44 @@ function formatDecimal(value: number | null | undefined): string {
 
 function formatNumber(value: number | null | undefined): string {
   return value === undefined || value === null ? '-' : value.toLocaleString();
+}
+
+function formatUmaLine(uma: PlayerTopUmaSummary | undefined): string {
+  if (uma === undefined) {
+    return 'No data';
+  }
+
+  return `${uma.matches} GP - ${formatDecimal(uma.pointsPerGame)} PPG`;
+}
+
+function formatBestUmaLine(uma: PlayerTopUmaSummary | undefined): string {
+  if (uma === undefined) {
+    return 'No data';
+  }
+
+  if (uma.performanceScore === undefined) {
+    return `${formatDecimal(uma.pointsPerGame)} PPG - ${uma.matches} GP`;
+  }
+
+  return `${formatNumber(uma.performanceScore)} score - ${uma.matches} GP`;
+}
+
+function formatRecordDetail(profile: PlayerProfileSummary): string {
+  const record = formatRecord(profile);
+
+  return record === '-' ? 'Record unknown' : `${record} W-L`;
+}
+
+function formatPaceValue(pointsPerGame: number | null | undefined): string {
+  const formattedPace = formatDecimal(pointsPerGame);
+
+  return formattedPace === '-' ? '-' : `${formattedPace} PPG`;
+}
+
+function formatWinRateDetail(winRate: number | null | undefined): string {
+  const formattedWinRate = formatPercent(winRate);
+
+  return formattedWinRate === '-' ? 'Win rate unknown' : `${formattedWinRate} win`;
 }
 
 function getRefreshCooldownMs(updatedAt: number | undefined, now: number): number {

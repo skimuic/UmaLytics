@@ -396,6 +396,65 @@ a.player-name:hover {
   background: #f8fafc;
 }
 
+.scouting-report {
+  border-top: 1px solid #edf1f6;
+  display: grid;
+  gap: 6px;
+  margin-top: 2px;
+  padding-top: 7px;
+}
+
+.scouting-report p {
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.report-grid {
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.report-metric {
+  background: #f8fafc;
+  border: 1px solid #e6ebf2;
+  border-radius: 6px;
+  display: grid;
+  gap: 2px;
+  min-height: 52px;
+  min-width: 0;
+  padding: 6px 7px;
+}
+
+.report-metric span {
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.report-metric strong {
+  color: #17202a;
+  font-size: 11px;
+  line-height: 1.2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.report-metric small {
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .top-umas ol {
   display: grid;
   gap: 4px;
@@ -527,6 +586,25 @@ a.player-name:hover {
 .theme-dark .stat-cell {
   background: #0b1220;
   border-color: #263244;
+}
+
+.theme-dark .scouting-report {
+  border-top-color: #263244;
+}
+
+.theme-dark .scouting-report p,
+.theme-dark .report-metric span,
+.theme-dark .report-metric small {
+  color: #8f9bad;
+}
+
+.theme-dark .report-metric {
+  background: #0b1220;
+  border-color: #263244;
+}
+
+.theme-dark .report-metric strong {
+  color: #d1d5db;
 }
 
 .theme-dark .profile-data-status {
