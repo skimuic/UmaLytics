@@ -3,6 +3,7 @@ const SYNCED_DRAFT_STATE_MESSAGE_TYPE = 'umalytics:synced-draft-state';
 type JsonRecord = Record<string, unknown>;
 
 export default defineUnlistedScript(() => {
+  installConsoleDiagnosticHook();
   installFetchHook();
   installXhrHook();
   installWebSocketHook();
@@ -10,6 +11,22 @@ export default defineUnlistedScript(() => {
 
   window.setInterval(scanBrowserStorage, 2_000);
 });
+
+function installConsoleDiagnosticHook(): void {
+  const consoleMethods = ['debug', 'log', 'info', 'warn'] as const;
+
+  for (const method of consoleMethods) {
+    const originalMethod = window.console[method].bind(window.console);
+
+    window.console[method] = (...args: unknown[]) => {
+      for (const arg of args) {
+        inspectPossiblePayload(arg);
+      }
+
+      originalMethod(...args);
+    };
+  }
+}
 
 function installFetchHook(): void {
   const originalFetch = window.fetch.bind(window);
