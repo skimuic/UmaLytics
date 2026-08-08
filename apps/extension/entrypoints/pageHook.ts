@@ -1,9 +1,20 @@
 const SYNCED_DRAFT_STATE_MESSAGE_TYPE = 'umalytics:synced-draft-state';
 const SYNC_EFFECT_LOG_PREFIX = '[SYNC EFFECT] Starting sync';
+const INSTALL_FLAG = '__umalyticsPageHookInstalled';
 
 type JsonRecord = Record<string, unknown>;
+type UmaLyticsWindow = Window & {
+  [INSTALL_FLAG]?: boolean;
+};
 
 export default defineUnlistedScript(() => {
+  const pageWindow = window as UmaLyticsWindow;
+
+  if (pageWindow[INSTALL_FLAG] === true) {
+    return;
+  }
+
+  pageWindow[INSTALL_FLAG] = true;
   installSyncConsoleHook();
   installWebSocketHook();
   scanBrowserStorageOnce();

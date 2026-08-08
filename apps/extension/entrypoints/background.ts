@@ -6,11 +6,12 @@ import {
   getPlayerProfileSummaries,
   setPlayerProfileSummaries
 } from '../utils/profileStorage';
+import {
+  BEST_UMA_SCORE_VERSION,
+  MANUAL_PROFILE_REFRESH_COOLDOWN_MS,
+  PROFILE_CACHE_TTL_MS
+} from '../utils/profileConstants';
 import { getLatestPrematchRoster, setLatestPrematchRoster } from '../utils/rosterStorage';
-
-const PROFILE_CACHE_TTL_MS = 15 * 60 * 1000;
-const MANUAL_REFRESH_COOLDOWN_MS = 60 * 1000;
-const REQUIRED_BEST_UMA_SCORE_VERSION = 2;
 
 let enrichmentRunId = 0;
 
@@ -150,7 +151,7 @@ function getFreshProfiles(
           profile !== undefined &&
           now - profile.fetchedAt < PROFILE_CACHE_TTL_MS &&
           hasResolvedTopUmaLabels(profile) &&
-          profile.bestUmaScoreVersion === REQUIRED_BEST_UMA_SCORE_VERSION
+          profile.bestUmaScoreVersion === BEST_UMA_SCORE_VERSION
         );
       })
   );
@@ -171,5 +172,5 @@ function getRefreshCooldownMs(updatedAt: number | undefined, now: number): numbe
     return 0;
   }
 
-  return Math.max(updatedAt + MANUAL_REFRESH_COOLDOWN_MS - now, 0);
+  return Math.max(updatedAt + MANUAL_PROFILE_REFRESH_COOLDOWN_MS - now, 0);
 }

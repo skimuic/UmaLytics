@@ -22,14 +22,14 @@ export default defineContentScript({
   async main() {
     console.log('[UmaLytics] Extension loaded');
 
-    const matchCode = extractMatchCodeFromUrl(window.location.href);
+    const initialMatchCode = getCurrentMatchCode();
 
-    if (matchCode !== undefined) {
-      console.log(`[UmaLytics] Match detected: ${matchCode}`);
+    if (initialMatchCode !== undefined) {
+      console.log(`[UmaLytics] Match detected: ${initialMatchCode}`);
     }
 
     window.addEventListener('message', (event: MessageEvent<unknown>) => {
-      void handleWindowMessage(event.data, matchCode);
+      void handleWindowMessage(event.data, getCurrentMatchCode());
     });
 
     installRoomDomObserver();
@@ -118,6 +118,10 @@ function getRosterSignature(roster: { matchCode?: string; players: Array<{ userI
     .join('|');
 
   return `${roster.matchCode ?? 'unknown'}:${playerSignature}`;
+}
+
+function getCurrentMatchCode(): string | undefined {
+  return extractMatchCodeFromUrl(window.location.href);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

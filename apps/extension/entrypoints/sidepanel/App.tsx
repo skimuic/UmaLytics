@@ -17,11 +17,11 @@ import {
   LATEST_PREMATCH_ROSTER_STORAGE_KEY
 } from '../../utils/rosterStorage';
 import { sendProfileRefreshRequest } from '../../utils/messaging';
+import { MANUAL_PROFILE_REFRESH_COOLDOWN_MS } from '../../utils/profileConstants';
 
 const TEAM_IDS = ['team1', 'team2'] as const satisfies readonly TeamId[];
 const TEAM_SLOT_COUNT = 5;
 const SIDE_PANEL_THEME_STORAGE_KEY = 'sidePanelTheme';
-const MANUAL_REFRESH_COOLDOWN_MS = 60 * 1000;
 
 type SidePanelTheme = 'dark' | 'light';
 
@@ -238,16 +238,7 @@ function PlayerRow({
   const tags = getPlayerTags(player);
   const discordId = getLookupDiscordId(player);
   const profileUrl = profile?.profileUrl ?? player.profileUrl;
-  const note =
-    discordId === undefined
-      ? 'Open their Uma profile once available to scout detailed stats.'
-      : profile === undefined
-        ? 'Profile data has not loaded yet.'
-        : profile?.statsPrivate === true
-          ? 'Stats are private.'
-            : profile?.error !== undefined
-              ? profile.error
-              : undefined;
+  const note = getPlayerNote(profile, discordId);
   const statsMessage = getStatsMessage(profile, isProfileLoading, discordId);
 
   return (
@@ -530,7 +521,26 @@ function getRefreshCooldownMs(updatedAt: number | undefined, now: number): numbe
     return 0;
   }
 
-  return Math.max(updatedAt + MANUAL_REFRESH_COOLDOWN_MS - now, 0);
+  return Math.max(updatedAt + MANUAL_PROFILE_REFRESH_COOLDOWN_MS - now, 0);
+}
+
+function getPlayerNote(
+  profile: PlayerProfileSummary | undefined,
+  discordId: string | undefined
+): string | undefined {
+  if (discordId === undefined) {
+    return 'Open their Uma profile once available to scout detailed stats.';
+  }
+
+  if (profile === undefined) {
+    return 'Profile data has not loaded yet.';
+  }
+
+  if (profile.statsPrivate === true) {
+    return 'Stats are private.';
+  }
+
+  return profile.error;
 }
 
 function getStatsMessage(

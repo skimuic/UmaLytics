@@ -1,0 +1,3 @@
+export const PROFILE_CACHE_TTL_MS = 15 * 60 * 1000;
+export const MANUAL_PROFILE_REFRESH_COOLDOWN_MS = 60 * 1000;
+export const BEST_UMA_SCORE_VERSION = 2;

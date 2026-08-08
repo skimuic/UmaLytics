@@ -1,10 +1,10 @@
 import type { PlayerProfileSummary, PlayerTopUmaSummary, PrematchPlayer } from '@umalytics/shared';
+import { BEST_UMA_SCORE_VERSION } from './profileConstants';
 
 const API_ORIGIN = 'https://drafter-api.uma.guide';
 const PROFILE_ORIGIN = 'https://drafter.uma.guide';
 const UMA_LABEL_CACHE_TTL_MS = 60 * 60 * 1000;
 const BEST_UMA_MIN_MATCHES = 4;
-const BEST_UMA_SCORE_VERSION = 2;
 const API_RATE_LIMIT_BACKOFF_MS = 30 * 1000;
 const API_SERVER_ERROR_BACKOFF_MS = 10 * 1000;
 
@@ -78,15 +78,49 @@ export async function fetchPlayerProfileSummaries(
   players: PrematchPlayer[]
 ): Promise<Record<string, PlayerProfileSummary>> {
   const [leaderboard, umaLabels] = await Promise.all([
-    fetchActiveLeaderboard(),
+    fetchActiveLeaderboard().catch((caught) => {
+      console.warn('[UmaLytics] Unable to load active leaderboard:', caught);
+      return { ranksByDiscordId: new Map() } satisfies LeaderboardLookup;
+    }),
     fetchUmaLabels()
   ]);
   const uniquePlayers = uniqueByDiscordId(players);
-  const summaries = await mapWithConcurrency(uniquePlayers, 3, (player) =>
-    fetchPlayerProfileSummary(player, leaderboard, umaLabels)
+  const summaries = await mapWithConcurrency(uniquePlayers, 3, async (player) =>
+    fetchPlayerProfileSummary(player, leaderboard, umaLabels).catch((caught) =>
+      buildUnavailablePlayerSummary(player, getErrorMessage(caught))
+    )
   );
 
   return Object.fromEntries(summaries.map((summary) => [summary.discordId, summary]));
+}
+
+function buildUnavailablePlayerSummary(
+  player: PrematchPlayer,
+  error: string
+): PlayerProfileSummary {
+  return {
+    discordId: player.discordId,
+    displayName: player.displayName,
+    rank: null,
+    rating: player.displayRatingSnapshot ?? player.ratingSnapshot ?? null,
+    ratingDeviation: player.displayRdSnapshot ?? player.rdSnapshot ?? null,
+    conservativeRating: null,
+    wins: null,
+    losses: null,
+    winRate: null,
+    matches: null,
+    points: null,
+    pointsPerGame: null,
+    podiums: null,
+    mvpMatches: null,
+    topUmas: [],
+    bestUmas: [],
+    bestUmaScoreVersion: BEST_UMA_SCORE_VERSION,
+    statsPrivate: false,
+    fetchedAt: Date.now(),
+    profileUrl: `${PROFILE_ORIGIN}/players/${encodeURIComponent(player.discordId)}`,
+    error
+  };
 }
 
 async function fetchPlayerProfileSummary(
