@@ -1,10 +1,19 @@
+import { injectScript } from 'wxt/utils/inject-script';
+import type { ScriptPublicPath } from 'wxt/utils/inject-script';
 import type { PrematchRoster } from '@umalytics/shared';
 import { extractMatchCodeFromUrl } from '../utils/matchDetection';
 import { sendPrematchRoster } from '../utils/messaging';
 import { extractPrematchRosterFromRoomDom } from '../utils/domLobbyExtraction';
+import { extractPrematchRosterFromSyncedDraftState } from '../utils/playerExtraction';
 
+const SYNCED_DRAFT_STATE_MESSAGE_TYPE = 'umalytics:synced-draft-state';
+const PAGE_HOOK_SCRIPT_PATH = '/pageHook.js' as ScriptPublicPath;
 const ROOM_DOM_SCAN_DEBOUNCE_MS = 750;
+type RosterSource = 'dom' | 'synced';
+
 let lastRosterSignature: string | undefined;
+let lastRosterMatchCode: string | undefined;
+let lastRosterSource: RosterSource | undefined;
 let roomDomScanTimer: number | undefined;
 
 export default defineContentScript({
@@ -19,9 +28,28 @@ export default defineContentScript({
       console.log(`[UmaLytics] Match detected: ${matchCode}`);
     }
 
+    window.addEventListener('message', (event: MessageEvent<unknown>) => {
+      void handleWindowMessage(event.data, matchCode);
+    });
+
     installRoomDomObserver();
+    await injectScript(PAGE_HOOK_SCRIPT_PATH, { keepInDom: true });
   }
 });
+
+async function handleWindowMessage(message: unknown, matchCode?: string): Promise<void> {
+  if (!isRecord(message) || message.type !== SYNCED_DRAFT_STATE_MESSAGE_TYPE) {
+    return;
+  }
+
+  const roster = extractPrematchRosterFromSyncedDraftState(message.payload, matchCode);
+
+  if (roster === null || roster.players.length !== 10) {
+    return;
+  }
+
+  await publishRoster(roster, 'synced');
+}
 
 function installRoomDomObserver(): void {
   queueRoomDomScan();
@@ -54,11 +82,19 @@ async function publishRoomDomRoster(): Promise<void> {
     return;
   }
 
-  await publishRoster(roster);
+  await publishRoster(roster, 'dom');
 }
 
-async function publishRoster(roster: PrematchRoster): Promise<void> {
+async function publishRoster(roster: PrematchRoster, source: RosterSource): Promise<void> {
   if (roster.players.length === 0) {
+    return;
+  }
+
+  if (
+    source === 'dom' &&
+    lastRosterSource === 'synced' &&
+    lastRosterMatchCode === roster.matchCode
+  ) {
     return;
   }
 
@@ -70,6 +106,8 @@ async function publishRoster(roster: PrematchRoster): Promise<void> {
 
   console.log(`[UmaLytics] Roster detected: ${roster.players.length} players`);
   lastRosterSignature = rosterSignature;
+  lastRosterMatchCode = roster.matchCode;
+  lastRosterSource = source;
   await sendPrematchRoster(roster);
 }
 
@@ -80,4 +118,8 @@ function getRosterSignature(roster: { matchCode?: string; players: Array<{ userI
     .join('|');
 
   return `${roster.matchCode ?? 'unknown'}:${playerSignature}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
