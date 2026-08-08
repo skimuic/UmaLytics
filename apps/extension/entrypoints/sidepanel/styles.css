@@ -121,7 +121,7 @@ body {
 .player-list {
   display: grid;
   gap: 6px;
-  grid-template-rows: repeat(5, 218px);
+  grid-auto-rows: minmax(218px, auto);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -140,6 +140,7 @@ body {
 
 .player-row.expanded {
   height: 313px;
+  overflow: visible;
 }
 
 .player-main {
