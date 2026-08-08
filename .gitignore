@@ -4,6 +4,7 @@ dist/
 .wxt/
 
 *.log
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
