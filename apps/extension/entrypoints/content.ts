@@ -4,12 +4,12 @@ export default defineContentScript({
   matches: ['https://drafter.uma.guide/*'],
   runAt: 'document_idle',
   main() {
-    console.log('[UmaProfessor] Extension loaded');
+    console.log('[UmaLytics] Extension loaded');
 
     const matchCode = extractMatchCodeFromUrl(window.location.href);
 
     if (matchCode !== undefined) {
-      console.log(`[UmaProfessor] Match detected: ${matchCode}`);
+      console.log(`[UmaLytics] Match detected: ${matchCode}`);
     }
   }
 });

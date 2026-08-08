@@ -1,4 +1,4 @@
-import type { MatchCode } from '@uma-professor/shared';
+import type { MatchCode } from '@umalytics/shared';
 
 const SPECTATE_ROUTE_PATTERN = /^\/spectate\/([^/?#]+)/;
 

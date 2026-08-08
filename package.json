@@ -1,11 +1,11 @@
 {
-  "name": "uma-professor",
+  "name": "umalytics",
   "version": "0.0.0",
   "private": true,
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "pnpm --filter @uma-professor/extension dev",
-    "build": "pnpm --filter @uma-professor/extension build",
+    "dev": "pnpm --filter @umalytics/extension dev",
+    "build": "pnpm --filter @umalytics/extension build",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

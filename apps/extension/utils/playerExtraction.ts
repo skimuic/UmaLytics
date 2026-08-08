@@ -1,4 +1,4 @@
-import type { MatchCode, PrematchPlayer, PrematchRoster } from '@uma-professor/shared';
+import type { MatchCode, PrematchPlayer, PrematchRoster } from '@umalytics/shared';
 
 export function normalizePrematchRosterFromPlayers(
   value: unknown,

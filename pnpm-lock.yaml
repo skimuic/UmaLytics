@@ -14,7 +14,7 @@ importers:
 
   apps/extension:
     dependencies:
-      '@uma-professor/shared':
+      '@umalytics/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       react:

@@ -1,12 +1,12 @@
 import { browser } from 'wxt/browser';
-import type { PrematchRoster } from '@uma-professor/shared';
+import type { PrematchRoster } from '@umalytics/shared';
 
-export type UmaProfessorMessage = {
+export type UmaLyticsMessage = {
   type: 'prematch-roster-detected';
   roster: PrematchRoster;
 };
 
-export function isUmaProfessorMessage(value: unknown): value is UmaProfessorMessage {
+export function isUmaLyticsMessage(value: unknown): value is UmaLyticsMessage {
   if (!isRecord(value) || value.type !== 'prematch-roster-detected') {
     return false;
   }
@@ -18,7 +18,7 @@ export async function sendPrematchRoster(roster: PrematchRoster): Promise<void> 
   await browser.runtime.sendMessage({
     type: 'prematch-roster-detected',
     roster
-  } satisfies UmaProfessorMessage);
+  } satisfies UmaLyticsMessage);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

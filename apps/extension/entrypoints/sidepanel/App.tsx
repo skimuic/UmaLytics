@@ -18,7 +18,7 @@ export default function App() {
           margin: 0
         }}
       >
-        UmaProfessor
+        UmaLytics
       </h1>
     </main>
   );

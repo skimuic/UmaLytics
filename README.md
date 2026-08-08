@@ -1,6 +1,6 @@
-# UmaProfessor
+# UmaLytics
 
-UmaProfessor is a browser-extension companion for the competitive 5v5 Uma Drafter platform.
+UmaLytics is a browser-extension companion for the competitive 5v5 Uma Drafter platform.
 
 Current scope:
 
