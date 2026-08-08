@@ -4,6 +4,7 @@ const API_ORIGIN = 'https://drafter-api.uma.guide';
 const PROFILE_ORIGIN = 'https://drafter.uma.guide';
 const UMA_LABEL_CACHE_TTL_MS = 60 * 60 * 1000;
 const BEST_UMA_MIN_MATCHES = 4;
+const BEST_UMA_SCORE_VERSION = 2;
 
 interface ApiPlayerProfile {
   displayName?: string;
@@ -145,6 +146,7 @@ async function fetchPlayerProfileSummary(
     mvpMatches: stats?.summary?.totalMvpMatches ?? null,
     topUmas: getTopPlayedUmas(stats?.umaEntries, umaLabels),
     bestUmas: getBestPerformingUmas(stats?.umaEntries, umaLabels),
+    bestUmaScoreVersion: BEST_UMA_SCORE_VERSION,
     statsPrivate,
     fetchedAt: Date.now(),
     profileUrl,
@@ -432,7 +434,7 @@ function calculatePerformanceScore(
   const normalizedWinRate = winRate ?? 0;
   const normalizedPodiumRate = podiumRate ?? 0;
 
-  return Math.round((normalizedPpg * 0.6 + normalizedWinRate * 0.3 + normalizedPodiumRate * 0.1) * 100);
+  return Math.round((normalizedPpg * 0.7 + normalizedWinRate * 0.2 + normalizedPodiumRate * 0.1) * 100);
 }
 
 function addNullable(left: number | null, right: number | null): number | null {

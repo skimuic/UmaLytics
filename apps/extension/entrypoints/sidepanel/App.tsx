@@ -27,7 +27,7 @@ export default function App() {
   const [roster, setRoster] = useState<PrematchRoster | undefined>();
   const [profileSnapshot, setProfileSnapshot] = useState<PlayerProfileSummariesSnapshot | undefined>();
   const [theme, setTheme] = useState<SidePanelTheme>('dark');
-  const [expandedPlayerKey, setExpandedPlayerKey] = useState<string | undefined>();
+  const [expandedPlayerKeys, setExpandedPlayerKeys] = useState<string[]>([]);
 
   useEffect(() => {
     void getLatestPrematchRoster().then(setRoster);
@@ -69,6 +69,14 @@ export default function App() {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     void browser.storage.local.set({ [SIDE_PANEL_THEME_STORAGE_KEY]: nextTheme });
+  };
+
+  const toggleExpandedPlayer = (playerKey: string) => {
+    setExpandedPlayerKeys((currentKeys) =>
+      currentKeys.includes(playerKey)
+        ? currentKeys.filter((currentKey) => currentKey !== playerKey)
+        : [...currentKeys, playerKey]
+    );
   };
 
   return (
@@ -113,8 +121,8 @@ export default function App() {
               team={team}
               profiles={profileSnapshot?.profiles ?? {}}
               loadingDiscordIds={profileSnapshot?.loadingDiscordIds ?? []}
-              expandedPlayerKey={expandedPlayerKey}
-              onTogglePlayer={setExpandedPlayerKey}
+              expandedPlayerKeys={expandedPlayerKeys}
+              onTogglePlayer={toggleExpandedPlayer}
             />
           ))}
         </section>
@@ -127,14 +135,14 @@ function TeamSection({
   team,
   profiles,
   loadingDiscordIds,
-  expandedPlayerKey,
+  expandedPlayerKeys,
   onTogglePlayer
 }: {
   team: PrematchTeam;
   profiles: Record<string, PlayerProfileSummary>;
   loadingDiscordIds: string[];
-  expandedPlayerKey?: string;
-  onTogglePlayer: (playerKey: string | undefined) => void;
+  expandedPlayerKeys: string[];
+  onTogglePlayer: (playerKey: string) => void;
 }) {
   const playerSlots = Array.from({ length: TEAM_SLOT_COUNT }, (_, index) => team.players[index]);
 
@@ -157,10 +165,9 @@ function TeamSection({
               player={player}
               profile={profiles[player.discordId]}
               isProfileLoading={loadingDiscordIds.includes(player.discordId)}
-              isExpanded={expandedPlayerKey === getPlayerKey(player)}
+              isExpanded={expandedPlayerKeys.includes(getPlayerKey(player))}
               onToggleExpanded={() => {
-                const playerKey = getPlayerKey(player);
-                onTogglePlayer(expandedPlayerKey === playerKey ? undefined : playerKey);
+                onTogglePlayer(getPlayerKey(player));
               }}
             />
           )
@@ -198,17 +205,20 @@ function PlayerRow({
     <li className={isExpanded ? 'player-row expanded' : 'player-row'}>
       <div className="player-main">
         {profileUrl === undefined ? (
-          <button type="button" className="player-name player-expand-button" onClick={onToggleExpanded}>
-            {profile?.displayName ?? player.displayName}
-          </button>
+          <span className="player-name-row">
+            <span className="player-name">{profile?.displayName ?? player.displayName}</span>
+            <button type="button" className="expand-button" onClick={onToggleExpanded}>
+              {isExpanded ? 'Hide' : 'Details'}
+            </button>
+          </span>
         ) : (
           <span className="player-name-row">
-            <button type="button" className="player-name player-expand-button" onClick={onToggleExpanded}>
+            <a className="player-name" href={profileUrl} target="_blank" rel="noreferrer">
               {profile?.displayName ?? player.displayName}
-            </button>
-            <a className="profile-link" href={profileUrl} target="_blank" rel="noreferrer" title="Open profile">
-              Open
             </a>
+            <button type="button" className="expand-button" onClick={onToggleExpanded}>
+              {isExpanded ? 'Hide' : 'Details'}
+            </button>
           </span>
         )}
         <span className="player-id">{discordId ?? 'Profile unavailable from room page'}</span>

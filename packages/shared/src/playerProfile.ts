@@ -32,6 +32,7 @@ export interface PlayerProfileSummary {
   mvpMatches?: number | null;
   topUmas?: PlayerTopUmaSummary[];
   bestUmas?: PlayerTopUmaSummary[];
+  bestUmaScoreVersion?: number;
   statsPrivate?: boolean;
   fetchedAt: number;
   profileUrl: string;

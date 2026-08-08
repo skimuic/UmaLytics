@@ -9,6 +9,7 @@ import {
 import { getLatestPrematchRoster, setLatestPrematchRoster } from '../utils/rosterStorage';
 
 const PROFILE_CACHE_TTL_MS = 15 * 60 * 1000;
+const REQUIRED_BEST_UMA_SCORE_VERSION = 2;
 
 let enrichmentRunId = 0;
 
@@ -112,7 +113,8 @@ function getFreshProfiles(
         return (
           profile !== undefined &&
           now - profile.fetchedAt < PROFILE_CACHE_TTL_MS &&
-          hasResolvedTopUmaLabels(profile)
+          hasResolvedTopUmaLabels(profile) &&
+          profile.bestUmaScoreVersion === REQUIRED_BEST_UMA_SCORE_VERSION
         );
       })
   );
