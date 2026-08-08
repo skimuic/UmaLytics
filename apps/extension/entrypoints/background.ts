@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
 import { isUmaLyticsMessage } from '../utils/messaging';
+import { setLatestPrematchRoster } from '../utils/rosterStorage';
 
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message: unknown) => {
@@ -9,6 +10,7 @@ export default defineBackground(() => {
 
     if (message.type === 'prematch-roster-detected') {
       console.log('[UmaLytics] Roster detected:', message.roster);
+      void setLatestPrematchRoster(message.roster);
     }
   });
 });
