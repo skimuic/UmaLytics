@@ -5,7 +5,13 @@ export default defineConfig({
   manifest: {
     name: 'UmaLytics',
     description: 'Prematch scouting companion for Uma Drafter.',
-    permissions: ['storage']
+    permissions: ['storage'],
+    web_accessible_resources: [
+      {
+        resources: ['pageHook.js'],
+        matches: ['https://drafter.uma.guide/*']
+      }
+    ]
   },
   modules: ['@wxt-dev/module-react']
 });
