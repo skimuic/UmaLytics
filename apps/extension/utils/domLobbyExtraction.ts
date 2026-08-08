@@ -1,9 +1,6 @@
 import type { MatchCode, PrematchPlayer, PrematchRoster, PrematchTeam, TeamId } from '@umalytics/shared';
 
-const TEAM_HEADINGS: Record<string, TeamId> = {
-  'Team 1': 'team1',
-  'Team 2': 'team2'
-};
+const TEAM_IDS = ['team1', 'team2'] as const satisfies readonly TeamId[];
 
 const PLAYER_ROLES = new Set(['Player', 'Captain']);
 
@@ -31,26 +28,39 @@ export function extractPrematchRosterFromRoomDom(document: Document): PrematchRo
   };
 }
 
-function findTeamSections(document: Document): Array<{ id: TeamId; element: HTMLElement }> {
-  return Array.from(document.querySelectorAll<HTMLHeadingElement>('h2'))
-    .map((heading) => {
-      const label = normalizeText(heading.textContent);
-      const id = label === undefined ? undefined : TEAM_HEADINGS[label];
-      const element = heading.closest<HTMLElement>('.surface-3d');
+function findTeamSections(document: Document): Array<{ id: TeamId; name?: string; element: HTMLElement }> {
+  const seen = new Set<HTMLElement>();
+  const candidates: Array<{ name?: string; element: HTMLElement }> = [];
 
-      return id === undefined || element === null ? null : { id, element };
-    })
-    .filter((section): section is { id: TeamId; element: HTMLElement } => section !== null);
+  for (const heading of Array.from(document.querySelectorAll<HTMLHeadingElement>('h2'))) {
+    const element = heading.closest<HTMLElement>('.surface-3d');
+
+    if (element === null || seen.has(element) || findPlayerRows(element).length === 0) {
+      continue;
+    }
+
+    seen.add(element);
+    candidates.push({
+      name: normalizeText(heading.textContent),
+      element
+    });
+  }
+
+  return candidates.slice(0, TEAM_IDS.length).flatMap((candidate, index) => {
+    const id = TEAM_IDS[index];
+
+    return id === undefined ? [] : [{ ...candidate, id }];
+  });
 }
 
-function extractTeam(section: { id: TeamId; element: HTMLElement }): PrematchTeam {
+function extractTeam(section: { id: TeamId; name?: string; element: HTMLElement }): PrematchTeam {
   const players = findPlayerRows(section.element).map((row, index) =>
     extractPlayer(row, section.id, index)
   );
 
   return {
     id: section.id,
-    name: section.id === 'team1' ? 'Team 1' : 'Team 2',
+    name: section.name ?? (section.id === 'team1' ? 'Team 1' : 'Team 2'),
     players
   };
 }
