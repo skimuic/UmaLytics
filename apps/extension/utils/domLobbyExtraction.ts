@@ -29,28 +29,87 @@ export function extractPrematchRosterFromRoomDom(document: Document): PrematchRo
 }
 
 function findTeamSections(document: Document): Array<{ id: TeamId; name?: string; element: HTMLElement }> {
+  const root = document.body ?? document.documentElement;
+  const rows = findPlayerRows(root);
   const seen = new Set<HTMLElement>();
   const candidates: Array<{ name?: string; element: HTMLElement }> = [];
 
-  for (const heading of Array.from(document.querySelectorAll<HTMLHeadingElement>('h2'))) {
-    const element = heading.closest<HTMLElement>('.surface-3d');
+  for (const row of rows) {
+    const element = findTeamElement(row, rows);
 
-    if (element === null || seen.has(element) || findPlayerRows(element).length === 0) {
+    if (element === null || seen.has(element)) {
       continue;
     }
 
     seen.add(element);
     candidates.push({
-      name: normalizeText(heading.textContent),
+      name: readTeamName(element),
       element
     });
   }
 
-  return candidates.slice(0, TEAM_IDS.length).flatMap((candidate, index) => {
+  return candidates.sort(compareTeamCandidates).slice(0, TEAM_IDS.length).flatMap((candidate, index) => {
     const id = TEAM_IDS[index];
 
     return id === undefined ? [] : [{ ...candidate, id }];
   });
+}
+
+function findTeamElement(row: HTMLElement, allPlayerRows: HTMLElement[]): HTMLElement | null {
+  const withHeading = findClosestTeamElement(row, allPlayerRows, true);
+
+  return withHeading ?? findClosestTeamElement(row, allPlayerRows, false);
+}
+
+function findClosestTeamElement(
+  row: HTMLElement,
+  allPlayerRows: HTMLElement[],
+  requireHeading: boolean
+): HTMLElement | null {
+  const minRows = requireHeading ? 1 : 2;
+  let current = row.parentElement;
+
+  while (current !== null && current !== row.ownerDocument.body) {
+    const playerRowCount = countContainedRows(current, allPlayerRows);
+    const hasTeamHeading = current.querySelector('h2, h3') !== null;
+
+    if (
+      playerRowCount >= minRows &&
+      playerRowCount <= 5 &&
+      (!requireHeading || hasTeamHeading)
+    ) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  return null;
+}
+
+function countContainedRows(element: HTMLElement, rows: HTMLElement[]): number {
+  return rows.filter((row) => element.contains(row)).length;
+}
+
+function readTeamName(element: HTMLElement): string | undefined {
+  return Array.from(element.querySelectorAll<HTMLHeadingElement>('h2, h3'))
+    .map((heading) => normalizeText(heading.textContent))
+    .find((text) => text !== undefined);
+}
+
+function compareTeamCandidates(
+  left: { element: HTMLElement },
+  right: { element: HTMLElement }
+): number {
+  const leftRect = left.element.getBoundingClientRect();
+  const rightRect = right.element.getBoundingClientRect();
+  const verticalDelta = leftRect.top - rightRect.top;
+
+  if (Math.abs(verticalDelta) > 20) {
+    return verticalDelta;
+  }
+
+  return leftRect.left - rightRect.left;
 }
 
 function extractTeam(section: { id: TeamId; name?: string; element: HTMLElement }): PrematchTeam {
