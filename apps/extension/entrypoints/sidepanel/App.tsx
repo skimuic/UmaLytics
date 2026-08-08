@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
-import type { PrematchPlayer, PrematchRoster, PrematchTeam, TeamId } from '@umalytics/shared';
+import type {
+  PlayerProfileSummary,
+  PrematchPlayer,
+  PrematchRoster,
+  PrematchTeam,
+  TeamId
+} from '@umalytics/shared';
+import {
+  getPlayerProfileSummaries,
+  PLAYER_PROFILE_SUMMARIES_STORAGE_KEY,
+  type PlayerProfileSummariesSnapshot
+} from '../../utils/profileStorage';
 import {
   getLatestPrematchRoster,
   LATEST_PREMATCH_ROSTER_STORAGE_KEY
@@ -10,9 +21,11 @@ const TEAM_IDS = ['team1', 'team2'] as const satisfies readonly TeamId[];
 
 export default function App() {
   const [roster, setRoster] = useState<PrematchRoster | undefined>();
+  const [profileSnapshot, setProfileSnapshot] = useState<PlayerProfileSummariesSnapshot | undefined>();
 
   useEffect(() => {
     void getLatestPrematchRoster().then(setRoster);
+    void getPlayerProfileSummaries().then(setProfileSnapshot);
 
     const handleStorageChange = (
       changes: Record<string, Browser.storage.StorageChange>,
@@ -24,11 +37,15 @@ export default function App() {
 
       const rosterChange = changes[LATEST_PREMATCH_ROSTER_STORAGE_KEY];
 
-      if (rosterChange === undefined) {
-        return;
+      if (rosterChange !== undefined) {
+        setRoster(isPrematchRoster(rosterChange.newValue) ? rosterChange.newValue : undefined);
       }
 
-      setRoster(isPrematchRoster(rosterChange.newValue) ? rosterChange.newValue : undefined);
+      const profileChange = changes[PLAYER_PROFILE_SUMMARIES_STORAGE_KEY];
+
+      if (isProfileSnapshot(profileChange?.newValue)) {
+        setProfileSnapshot(profileChange.newValue);
+      }
     };
 
     browser.storage.onChanged.addListener(handleStorageChange);
@@ -39,13 +56,20 @@ export default function App() {
   }, []);
 
   const teamGroups = useMemo(() => getTeamGroups(roster), [roster]);
+  const loadingProfiles = profileSnapshot?.loadingDiscordIds.length ?? 0;
 
   return (
     <main className="app-shell">
       <header className="app-header">
         <div>
           <h1>UmaLytics</h1>
-          <p>{roster?.matchCode === undefined ? 'Lobby scouting' : `Match ${roster.matchCode}`}</p>
+          <p>
+            {roster?.matchCode === undefined
+              ? 'Lobby scouting'
+              : loadingProfiles > 0
+                ? `Match ${roster.matchCode} - scouting ${loadingProfiles}`
+                : `Match ${roster.matchCode}`}
+          </p>
         </div>
         <span className={roster === undefined ? 'status-pill idle' : 'status-pill live'}>
           {roster === undefined ? 'Waiting' : `${roster.players.length}/10`}
@@ -60,7 +84,12 @@ export default function App() {
       ) : (
         <section className="team-list" aria-label="Detected lobby teams">
           {teamGroups.map((team) => (
-            <TeamSection key={team.id} team={team} />
+            <TeamSection
+              key={team.id}
+              team={team}
+              profiles={profileSnapshot?.profiles ?? {}}
+              loadingDiscordIds={profileSnapshot?.loadingDiscordIds ?? []}
+            />
           ))}
         </section>
       )}
@@ -68,7 +97,15 @@ export default function App() {
   );
 }
 
-function TeamSection({ team }: { team: PrematchTeam }) {
+function TeamSection({
+  team,
+  profiles,
+  loadingDiscordIds
+}: {
+  team: PrematchTeam;
+  profiles: Record<string, PlayerProfileSummary>;
+  loadingDiscordIds: string[];
+}) {
   return (
     <section className="team-section">
       <header className="team-header">
@@ -80,32 +117,74 @@ function TeamSection({ team }: { team: PrematchTeam }) {
 
       <ol className="player-list">
         {team.players.map((player) => (
-          <PlayerRow key={`${player.discordId}:${player.userId}`} player={player} />
+          <PlayerRow
+            key={`${player.discordId}:${player.userId}`}
+            player={player}
+            profile={profiles[player.discordId]}
+            isProfileLoading={loadingDiscordIds.includes(player.discordId)}
+          />
         ))}
       </ol>
     </section>
   );
 }
 
-function PlayerRow({ player }: { player: PrematchPlayer }) {
-  const rating = player.displayRatingSnapshot ?? player.ratingSnapshot;
+function PlayerRow({
+  player,
+  profile,
+  isProfileLoading
+}: {
+  player: PrematchPlayer;
+  profile?: PlayerProfileSummary;
+  isProfileLoading: boolean;
+}) {
+  const rating = profile?.conservativeRating ?? profile?.rating ?? player.displayRatingSnapshot ?? player.ratingSnapshot;
   const tags = getPlayerTags(player);
+  const profileUrl = profile?.profileUrl ?? `https://drafter.uma.guide/players/${player.discordId}`;
 
   return (
     <li className="player-row">
       <div className="player-main">
-        <span className="player-name">{player.displayName}</span>
+        <a className="player-name" href={profileUrl} target="_blank" rel="noreferrer">
+          {profile?.displayName ?? player.displayName}
+        </a>
         <span className="player-id">{player.discordId}</span>
+        {profile?.title !== null && profile?.title !== undefined ? (
+          <span className="player-title">{profile.title}</span>
+        ) : null}
       </div>
       <div className="player-meta">
-        <span>{rating === undefined ? 'Rating unknown' : `${rating} rating`}</span>
+        <span>{formatRank(profile, isProfileLoading)}</span>
+        <span>{rating === undefined || rating === null ? 'Rating unknown' : `${rating} rating`}</span>
         {tags.map((tag) => (
           <span key={tag} className="player-tag">
             {tag}
           </span>
         ))}
+        {profile?.supporter === true ? <span className="player-tag">Supporter</span> : null}
       </div>
+      <div className="scouting-grid" aria-label={`${player.displayName} scouting summary`}>
+        <StatCell label="W-L" value={formatRecord(profile)} />
+        <StatCell label="Win" value={formatPercent(profile?.winRate)} />
+        <StatCell label="Pts/GP" value={formatDecimal(profile?.pointsPerGame)} />
+        <StatCell label="Podiums" value={formatNumber(profile?.podiums)} />
+        <StatCell label="MVP" value={formatNumber(profile?.mvpMatches)} />
+      </div>
+      {profile?.statsPrivate === true ? (
+        <p className="player-note">Stats are private.</p>
+      ) : profile?.error !== undefined ? (
+        <p className="player-note">{profile.error}</p>
+      ) : null}
     </li>
+  );
+}
+
+function StatCell({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="stat-cell">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </span>
   );
 }
 
@@ -149,4 +228,46 @@ function isPrematchRoster(value: unknown): value is PrematchRoster {
     'players' in value &&
     Array.isArray(value.players)
   );
+}
+
+function isProfileSnapshot(value: unknown): value is PlayerProfileSummariesSnapshot {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'profiles' in value &&
+    'loadingDiscordIds' in value &&
+    Array.isArray(value.loadingDiscordIds)
+  );
+}
+
+function formatRank(profile: PlayerProfileSummary | undefined, isLoading: boolean): string {
+  if (profile?.rank !== undefined && profile.rank !== null) {
+    return `#${profile.rank}`;
+  }
+
+  return isLoading ? 'Loading profile' : 'Unranked';
+}
+
+function formatRecord(profile: PlayerProfileSummary | undefined): string {
+  if (profile?.wins === undefined || profile.losses === undefined) {
+    return '-';
+  }
+
+  if (profile.wins === null || profile.losses === null) {
+    return '-';
+  }
+
+  return `${profile.wins}-${profile.losses}`;
+}
+
+function formatPercent(value: number | null | undefined): string {
+  return value === undefined || value === null ? '-' : `${(value * 100).toFixed(0)}%`;
+}
+
+function formatDecimal(value: number | null | undefined): string {
+  return value === undefined || value === null ? '-' : value.toFixed(1);
+}
+
+function formatNumber(value: number | null | undefined): string {
+  return value === undefined || value === null ? '-' : value.toLocaleString();
 }

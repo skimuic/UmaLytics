@@ -1,16 +1,108 @@
 import { browser } from 'wxt/browser';
+import type { PlayerProfileSummary, PrematchRoster } from '@umalytics/shared';
 import { isUmaLyticsMessage } from '../utils/messaging';
-import { setLatestPrematchRoster } from '../utils/rosterStorage';
+import { fetchPlayerProfileSummaries } from '../utils/playerProfileApi';
+import {
+  getPlayerProfileSummaries,
+  setPlayerProfileSummaries
+} from '../utils/profileStorage';
+import { getLatestPrematchRoster, setLatestPrematchRoster } from '../utils/rosterStorage';
+
+const PROFILE_CACHE_TTL_MS = 15 * 60 * 1000;
+
+let enrichmentRunId = 0;
 
 export default defineBackground(() => {
+  void getLatestPrematchRoster().then((roster) => {
+    if (roster !== undefined && roster.players.length > 0) {
+      void enrichRosterProfiles(roster);
+    }
+  });
+
   browser.runtime.onMessage.addListener((message: unknown) => {
     if (!isUmaLyticsMessage(message)) {
-      return;
+      return undefined;
     }
 
     if (message.type === 'prematch-roster-detected') {
-      console.log('[UmaLytics] Roster detected:', message.roster);
-      void setLatestPrematchRoster(message.roster);
+      return handlePrematchRosterDetected(message.roster);
     }
+
+    return undefined;
   });
 });
+
+async function handlePrematchRosterDetected(roster: PrematchRoster): Promise<void> {
+  console.log('[UmaLytics] Roster detected:', roster);
+  await setLatestPrematchRoster(roster);
+  await enrichRosterProfiles(roster);
+}
+
+async function enrichRosterProfiles(roster: PrematchRoster): Promise<void> {
+  const runId = ++enrichmentRunId;
+  const now = Date.now();
+  const cachedSnapshot = await getPlayerProfileSummaries();
+  const cachedProfiles = cachedSnapshot?.profiles ?? {};
+  const rosterDiscordIds = [...new Set(roster.players.map((player) => player.discordId))];
+  const freshProfiles = getFreshProfiles(cachedProfiles, rosterDiscordIds, now);
+  const missingDiscordIds = rosterDiscordIds.filter((discordId) => freshProfiles[discordId] === undefined);
+
+  await setPlayerProfileSummaries({
+    matchCode: roster.matchCode,
+    profiles: freshProfiles,
+    loadingDiscordIds: missingDiscordIds,
+    updatedAt: now
+  });
+
+  if (missingDiscordIds.length === 0) {
+    return;
+  }
+
+  try {
+    const fetchedProfiles = await fetchPlayerProfileSummaries(
+      roster.players.filter((player) => missingDiscordIds.includes(player.discordId))
+    );
+
+    if (runId !== enrichmentRunId) {
+      return;
+    }
+
+    await setPlayerProfileSummaries({
+      matchCode: roster.matchCode,
+      profiles: {
+        ...freshProfiles,
+        ...fetchedProfiles
+      },
+      loadingDiscordIds: [],
+      updatedAt: Date.now()
+    });
+  } catch (caught) {
+    if (runId !== enrichmentRunId) {
+      return;
+    }
+
+    console.warn('[UmaLytics] Profile scouting failed:', caught);
+    await setPlayerProfileSummaries({
+      matchCode: roster.matchCode,
+      profiles: freshProfiles,
+      loadingDiscordIds: [],
+      updatedAt: Date.now()
+    });
+  }
+}
+
+function getFreshProfiles(
+  cachedProfiles: Record<string, PlayerProfileSummary>,
+  discordIds: string[],
+  now: number
+): Record<string, PlayerProfileSummary> {
+  return Object.fromEntries(
+    discordIds
+      .map((discordId) => [discordId, cachedProfiles[discordId]] as const)
+      .filter((entry): entry is readonly [string, PlayerProfileSummary] => {
+        const profile = entry[1];
+
+        return profile !== undefined && now - profile.fetchedAt < PROFILE_CACHE_TTL_MS;
+      })
+  );
+}
