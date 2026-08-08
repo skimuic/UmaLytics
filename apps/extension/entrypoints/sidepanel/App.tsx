@@ -599,9 +599,9 @@ function getNotableBadges(profile: PlayerProfileSummary | undefined): NotableBad
         label: 'Top 10',
         tone: 'rank'
       });
-    } else if (profile.rank <= 50) {
+    } else if (profile.rank <= 25) {
       badges.push({
-        label: 'Top 50',
+        label: 'Top 25',
         tone: 'rank'
       });
     }
