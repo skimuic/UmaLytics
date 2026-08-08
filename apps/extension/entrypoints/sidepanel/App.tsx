@@ -431,7 +431,7 @@ function ScoutingReport({
         />
         <ReportMetric
           label="Scoring"
-          value={formatPaceValue(profile.pointsPerGame)}
+          value={formatScoringValue(profile.pointsPerGame)}
           detail={formatWinRateDetail(profile.winRate)}
         />
       </div>
@@ -716,10 +716,10 @@ function formatRecordDetail(profile: PlayerProfileSummary): string {
   return record === '-' ? 'Record unknown' : `${record} W-L`;
 }
 
-function formatPaceValue(pointsPerGame: number | null | undefined): string {
-  const formattedPace = formatDecimal(pointsPerGame);
+function formatScoringValue(pointsPerGame: number | null | undefined): string {
+  const formattedScoring = formatDecimal(pointsPerGame);
 
-  return formattedPace === '-' ? '-' : `${formattedPace} PPG`;
+  return formattedScoring === '-' ? '-' : `${formattedScoring} PPG`;
 }
 
 function formatWinRateDetail(winRate: number | null | undefined): string {
