@@ -300,7 +300,7 @@ body {
 
 .theme-dark {
   background: #080d18;
-  color: #e5edf7;
+  color: #d1d5db;
 }
 
 .theme-dark .app-header p,
@@ -308,7 +308,7 @@ body {
 .theme-dark .player-id,
 .theme-dark .top-umas p,
 .theme-dark .stat-cell span {
-  color: #94a3b8;
+  color: #8f9bad;
 }
 
 .theme-dark .theme-toggle,
@@ -337,11 +337,12 @@ body {
 }
 
 .theme-dark .empty-state h2,
+.theme-dark .app-header h1,
 .theme-dark .team-header h2,
 .theme-dark .player-name,
 .theme-dark .stat-cell strong,
 .theme-dark .uma-name {
-  color: #eef4ff;
+  color: #d1d5db;
 }
 
 .theme-dark .player-name:hover {
@@ -354,7 +355,7 @@ body {
 
 .theme-dark .player-meta,
 .theme-dark .uma-meta {
-  color: #cbd5e1;
+  color: #b6c0ce;
 }
 
 .theme-dark .player-tag {
