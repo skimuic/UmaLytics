@@ -39,7 +39,7 @@ export default defineBackground(() => {
 });
 
 async function handlePrematchRosterDetected(roster: PrematchRoster): Promise<void> {
-  console.log('[UmaLytics] Roster detected:', roster);
+  console.log(`[UmaLytics] Roster detected: ${roster.players.length} players`);
   await setLatestPrematchRoster(roster);
   await enrichRosterProfiles(roster);
 }
