@@ -418,7 +418,7 @@ function ScoutingReport({
           detail={formatRecordDetail(profile)}
         />
         <ReportMetric
-          label="Pace"
+          label="Scoring"
           value={formatPaceValue(profile.pointsPerGame)}
           detail={formatWinRateDetail(profile.winRate)}
         />
