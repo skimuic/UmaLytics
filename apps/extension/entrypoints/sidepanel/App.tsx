@@ -84,6 +84,7 @@ export default function App() {
   const hasRoster = roster !== undefined;
   const refreshCooldownMs = getRefreshCooldownMs(profileSnapshot?.updatedAt, now);
   const canRefresh = hasRoster && loadingProfiles === 0 && refreshCooldownMs === 0;
+  const profileStatusLabel = getProfileSnapshotStatus(profileSnapshot, loadingProfiles, now);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -112,13 +113,10 @@ export default function App() {
       <header className="app-header">
         <div>
           <h1>UmaLytics</h1>
-          <p>
-            {roster?.matchCode === undefined
-              ? 'Lobby scouting'
-              : loadingProfiles > 0
-                ? `Match ${roster.matchCode} - scouting ${loadingProfiles}`
-                : `Match ${roster.matchCode}`}
-          </p>
+          <p>{roster?.matchCode === undefined ? 'Lobby scouting' : `Match ${roster.matchCode}`}</p>
+          {profileStatusLabel === undefined ? null : (
+            <p className="profile-freshness">{profileStatusLabel}</p>
+          )}
         </div>
         <div className="header-actions">
           <div className="header-control-row">
@@ -166,6 +164,7 @@ export default function App() {
               profiles={profileSnapshot?.profiles ?? {}}
               loadingDiscordIds={profileSnapshot?.loadingDiscordIds ?? []}
               expandedPlayerKeys={expandedPlayerKeys}
+              now={now}
               onTogglePlayer={toggleExpandedPlayer}
             />
           ))}
@@ -180,12 +179,14 @@ function TeamSection({
   profiles,
   loadingDiscordIds,
   expandedPlayerKeys,
+  now,
   onTogglePlayer
 }: {
   team: PrematchTeam;
   profiles: Record<string, PlayerProfileSummary>;
   loadingDiscordIds: string[];
   expandedPlayerKeys: string[];
+  now: number;
   onTogglePlayer: (playerKey: string) => void;
 }) {
   const playerSlots = Array.from({ length: TEAM_SLOT_COUNT }, (_, index) => team.players[index]);
@@ -210,6 +211,7 @@ function TeamSection({
               profile={profiles[player.discordId]}
               isProfileLoading={loadingDiscordIds.includes(player.discordId)}
               isExpanded={expandedPlayerKeys.includes(getPlayerKey(player))}
+              now={now}
               onToggleExpanded={() => {
                 onTogglePlayer(getPlayerKey(player));
               }}
@@ -226,12 +228,14 @@ function PlayerRow({
   profile,
   isProfileLoading,
   isExpanded,
+  now,
   onToggleExpanded
 }: {
   player: PrematchPlayer;
   profile?: PlayerProfileSummary;
   isProfileLoading: boolean;
   isExpanded: boolean;
+  now: number;
   onToggleExpanded: () => void;
 }) {
   const rating = profile?.conservativeRating ?? profile?.rating ?? player.displayRatingSnapshot ?? player.ratingSnapshot;
@@ -293,11 +297,19 @@ function PlayerRow({
         emptyMessage={statsMessage}
       />
       {isExpanded ? (
-        <BestUmasList
-          bestUmas={profile?.bestUmas}
-          playerName={player.displayName}
-          emptyMessage={statsMessage}
-        />
+        <>
+          <ProfileDataStatus
+            discordId={discordId}
+            profile={profile}
+            isProfileLoading={isProfileLoading}
+            now={now}
+          />
+          <BestUmasList
+            bestUmas={profile?.bestUmas}
+            playerName={player.displayName}
+            emptyMessage={statsMessage}
+          />
+        </>
       ) : null}
       <p className={note === undefined ? 'player-note empty' : 'player-note'}>{note ?? ' '}</p>
     </li>
@@ -342,6 +354,26 @@ function StatCell({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </span>
+  );
+}
+
+function ProfileDataStatus({
+  discordId,
+  profile,
+  isProfileLoading,
+  now
+}: {
+  discordId: string | undefined;
+  profile: PlayerProfileSummary | undefined;
+  isProfileLoading: boolean;
+  now: number;
+}) {
+  const status = getProfileDataStatus(discordId, profile, isProfileLoading, now);
+
+  return (
+    <div className={`profile-data-status ${status.tone}`}>
+      <span>{status.label}</span>
+    </div>
   );
 }
 
@@ -522,6 +554,91 @@ function getRefreshCooldownMs(updatedAt: number | undefined, now: number): numbe
   }
 
   return Math.max(updatedAt + MANUAL_PROFILE_REFRESH_COOLDOWN_MS - now, 0);
+}
+
+function getProfileSnapshotStatus(
+  snapshot: PlayerProfileSummariesSnapshot | undefined,
+  loadingProfiles: number,
+  now: number
+): string | undefined {
+  if (loadingProfiles > 0) {
+    return `Refreshing ${loadingProfiles} profile${loadingProfiles === 1 ? '' : 's'}`;
+  }
+
+  if (snapshot === undefined) {
+    return undefined;
+  }
+
+  return `Profile data updated ${formatRelativeAge(snapshot.updatedAt, now)}`;
+}
+
+function getProfileDataStatus(
+  discordId: string | undefined,
+  profile: PlayerProfileSummary | undefined,
+  isProfileLoading: boolean,
+  now: number
+): { label: string; tone: 'fresh' | 'loading' | 'warning' | 'muted' } {
+  if (discordId === undefined) {
+    return {
+      label: 'Profile link unavailable from room page',
+      tone: 'muted'
+    };
+  }
+
+  if (isProfileLoading) {
+    return {
+      label: 'Refreshing profile data',
+      tone: 'loading'
+    };
+  }
+
+  if (profile === undefined) {
+    return {
+      label: 'Profile data not loaded yet',
+      tone: 'muted'
+    };
+  }
+
+  if (profile.statsPrivate === true) {
+    return {
+      label: `Stats private - checked ${formatRelativeAge(profile.fetchedAt, now)}`,
+      tone: 'warning'
+    };
+  }
+
+  if (profile.error !== undefined) {
+    return {
+      label: `Profile unavailable - checked ${formatRelativeAge(profile.fetchedAt, now)}`,
+      tone: 'warning'
+    };
+  }
+
+  return {
+    label: `Profile data current - updated ${formatRelativeAge(profile.fetchedAt, now)}`,
+    tone: 'fresh'
+  };
+}
+
+function formatRelativeAge(timestamp: number, now: number): string {
+  const ageSeconds = Math.max(Math.floor((now - timestamp) / 1000), 0);
+
+  if (ageSeconds < 10) {
+    return 'just now';
+  }
+
+  if (ageSeconds < 60) {
+    return `${ageSeconds}s ago`;
+  }
+
+  const ageMinutes = Math.floor(ageSeconds / 60);
+
+  if (ageMinutes < 60) {
+    return `${ageMinutes}m ago`;
+  }
+
+  const ageHours = Math.floor(ageMinutes / 60);
+
+  return `${ageHours}h ago`;
 }
 
 function getPlayerNote(

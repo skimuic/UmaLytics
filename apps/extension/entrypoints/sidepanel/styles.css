@@ -37,6 +37,12 @@ body {
   margin: 4px 0 0;
 }
 
+.app-header .profile-freshness {
+  color: #7c8aa0;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
 .status-pill {
   border-radius: 999px;
   font-size: 12px;
@@ -313,7 +319,7 @@ a.player-name:hover {
 }
 
 .best-umas {
-  margin-top: 4px;
+  margin-top: 2px;
   min-height: 91px;
   padding-top: 7px;
 }
@@ -352,6 +358,42 @@ a.player-name:hover {
   color: #64748b;
   font-size: 11px;
   line-height: 1.35;
+}
+
+.profile-data-status {
+  align-items: center;
+  border: 1px solid #e6ebf2;
+  border-radius: 6px;
+  color: #64748b;
+  display: flex;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 2px;
+  min-height: 25px;
+  padding: 5px 7px;
+}
+
+.profile-data-status.fresh {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.profile-data-status.loading {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.profile-data-status.warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.profile-data-status.muted {
+  background: #f8fafc;
 }
 
 .top-umas ol {
@@ -401,6 +443,7 @@ a.player-name:hover {
 }
 
 .theme-dark .app-header p,
+.theme-dark .app-header .profile-freshness,
 .theme-dark .team-header p,
 .theme-dark .player-id,
 .theme-dark .top-umas p,
@@ -484,6 +527,30 @@ a.player-name:hover {
 .theme-dark .stat-cell {
   background: #0b1220;
   border-color: #263244;
+}
+
+.theme-dark .profile-data-status {
+  background: #0b1220;
+  border-color: #263244;
+  color: #b6c0ce;
+}
+
+.theme-dark .profile-data-status.fresh {
+  background: #0d241b;
+  border-color: #1f5e43;
+  color: #86efac;
+}
+
+.theme-dark .profile-data-status.loading {
+  background: #10213c;
+  border-color: #234a7c;
+  color: #93c5fd;
+}
+
+.theme-dark .profile-data-status.warning {
+  background: #2a1e09;
+  border-color: #745017;
+  color: #fbbf24;
 }
 
 .theme-dark .top-umas {
