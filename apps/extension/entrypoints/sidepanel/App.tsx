@@ -140,21 +140,26 @@ function PlayerRow({
 }) {
   const rating = profile?.conservativeRating ?? profile?.rating ?? player.displayRatingSnapshot ?? player.ratingSnapshot;
   const tags = getPlayerTags(player);
-  const profileUrl = profile?.profileUrl ?? `https://drafter.uma.guide/players/${player.discordId}`;
+  const discordId = getLookupDiscordId(player);
+  const profileUrl = profile?.profileUrl ?? player.profileUrl;
 
   return (
     <li className="player-row">
       <div className="player-main">
-        <a className="player-name" href={profileUrl} target="_blank" rel="noreferrer">
-          {profile?.displayName ?? player.displayName}
-        </a>
-        <span className="player-id">{player.discordId}</span>
+        {profileUrl === undefined ? (
+          <span className="player-name">{profile?.displayName ?? player.displayName}</span>
+        ) : (
+          <a className="player-name" href={profileUrl} target="_blank" rel="noreferrer">
+            {profile?.displayName ?? player.displayName}
+          </a>
+        )}
+        <span className="player-id">{discordId ?? 'Profile unavailable from room page'}</span>
         {profile?.title !== null && profile?.title !== undefined ? (
           <span className="player-title">{profile.title}</span>
         ) : null}
       </div>
       <div className="player-meta">
-        <span>{formatRank(profile, isProfileLoading)}</span>
+        <span>{formatRank(profile, isProfileLoading && discordId !== undefined)}</span>
         <span>{rating === undefined || rating === null ? 'Rating unknown' : `${rating} rating`}</span>
         {tags.map((tag) => (
           <span key={tag} className="player-tag">
@@ -177,6 +182,10 @@ function PlayerRow({
       ) : null}
     </li>
   );
+}
+
+function getLookupDiscordId(player: PrematchPlayer): string | undefined {
+  return /^\d{16,20}$/.test(player.discordId) ? player.discordId : undefined;
 }
 
 function StatCell({ label, value }: { label: string; value: string }) {

@@ -168,6 +168,10 @@ function uniqueByDiscordId(players: PrematchPlayer[]): PrematchPlayer[] {
   const uniquePlayers: PrematchPlayer[] = [];
 
   for (const player of players) {
+    if (!isDiscordSnowflake(player.discordId)) {
+      continue;
+    }
+
     if (seen.has(player.discordId)) {
       continue;
     }
@@ -177,6 +181,10 @@ function uniqueByDiscordId(players: PrematchPlayer[]): PrematchPlayer[] {
   }
 
   return uniquePlayers;
+}
+
+function isDiscordSnowflake(value: string): boolean {
+  return /^\d{16,20}$/.test(value);
 }
 
 async function mapWithConcurrency<TInput, TOutput>(

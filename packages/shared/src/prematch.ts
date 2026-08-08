@@ -17,6 +17,10 @@ export interface PrematchPlayer {
   rdSnapshot?: number;
   displayRatingSnapshot?: number;
   displayRdSnapshot?: number;
+  avatarUrl?: string;
+  profileUrl?: string;
+  source?: 'synced-draft-state' | 'room-lobby-dom';
+  profileLookupUnavailable?: boolean;
 }
 
 export interface PrematchTeam {

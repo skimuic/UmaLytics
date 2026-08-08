@@ -44,8 +44,11 @@ async function enrichRosterProfiles(roster: PrematchRoster): Promise<void> {
   const cachedSnapshot = await getPlayerProfileSummaries();
   const cachedProfiles = cachedSnapshot?.profiles ?? {};
   const rosterDiscordIds = [...new Set(roster.players.map((player) => player.discordId))];
+  const lookupDiscordIds = rosterDiscordIds.filter(isDiscordSnowflake);
   const freshProfiles = getFreshProfiles(cachedProfiles, rosterDiscordIds, now);
-  const missingDiscordIds = rosterDiscordIds.filter((discordId) => freshProfiles[discordId] === undefined);
+  const missingDiscordIds = lookupDiscordIds.filter(
+    (discordId) => freshProfiles[discordId] === undefined
+  );
 
   await setPlayerProfileSummaries({
     matchCode: roster.matchCode,
@@ -89,6 +92,10 @@ async function enrichRosterProfiles(roster: PrematchRoster): Promise<void> {
       updatedAt: Date.now()
     });
   }
+}
+
+function isDiscordSnowflake(value: string): boolean {
+  return /^\d{16,20}$/.test(value);
 }
 
 function getFreshProfiles(
