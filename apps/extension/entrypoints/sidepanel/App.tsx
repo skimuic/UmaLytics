@@ -175,6 +175,23 @@ function PlayerRow({
         <StatCell label="Podiums" value={formatNumber(profile?.podiums)} />
         <StatCell label="MVP" value={formatNumber(profile?.mvpMatches)} />
       </div>
+      {profile?.topUmas !== undefined && profile.topUmas.length > 0 ? (
+        <div className="top-umas" aria-label={`${player.displayName} most played Umas`}>
+          <p>Most Played</p>
+          <ol>
+            {profile.topUmas.map((uma) => (
+              <li key={uma.umaId}>
+                <span className="uma-name" title={uma.name}>
+                  {uma.name}
+                </span>
+                <span className="uma-meta">
+                  {uma.matches} GP · {formatPercent(uma.winRate)} · {formatDecimal(uma.pointsPerGame)} PPG
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
       {profile?.statsPrivate === true ? (
         <p className="player-note">Stats are private.</p>
       ) : profile?.error !== undefined ? (

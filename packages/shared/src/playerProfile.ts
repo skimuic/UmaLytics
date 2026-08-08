@@ -1,3 +1,16 @@
+export interface PlayerTopUmaSummary {
+  umaId: string;
+  name: string;
+  matches: number;
+  wins: number;
+  losses: number;
+  winRate: number | null;
+  points: number;
+  pointsPerGame: number | null;
+  podiums: number;
+  mvpMatches: number;
+}
+
 export interface PlayerProfileSummary {
   discordId: string;
   displayName?: string;
@@ -16,6 +29,7 @@ export interface PlayerProfileSummary {
   pointsPerGame?: number | null;
   podiums?: number | null;
   mvpMatches?: number | null;
+  topUmas?: PlayerTopUmaSummary[];
   statsPrivate?: boolean;
   fetchedAt: number;
   profileUrl: string;

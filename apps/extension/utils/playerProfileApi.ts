@@ -1,7 +1,8 @@
-import type { PlayerProfileSummary, PrematchPlayer } from '@umalytics/shared';
+import type { PlayerProfileSummary, PlayerTopUmaSummary, PrematchPlayer } from '@umalytics/shared';
 
 const API_ORIGIN = 'https://drafter-api.uma.guide';
 const PROFILE_ORIGIN = 'https://drafter.uma.guide';
+const UMA_LABEL_CACHE_TTL_MS = 60 * 60 * 1000;
 
 interface ApiPlayerProfile {
   displayName?: string;
@@ -21,8 +22,13 @@ interface ApiPlayerStats {
 }
 
 interface ApiUmaEntry {
+  umaId?: string;
+  matches?: number;
   wins?: number;
   losses?: number;
+  pointsScored?: number;
+  podiumPlacements?: number;
+  mvpMatches?: number;
 }
 
 interface ApiSeason {
@@ -47,13 +53,31 @@ interface LeaderboardLookup {
   ranksByDiscordId: Map<string, ApiLeaderboardEntry & { rank: number }>;
 }
 
+interface UmaCard {
+  cardId?: number | string;
+  name?: string;
+  charaName?: string;
+  title?: string;
+  cardTitle?: string;
+}
+
+let cachedUmaLabels:
+  | {
+      labelsById: Map<string, string>;
+      fetchedAt: number;
+    }
+  | undefined;
+
 export async function fetchPlayerProfileSummaries(
   players: PrematchPlayer[]
 ): Promise<Record<string, PlayerProfileSummary>> {
-  const leaderboard = await fetchActiveLeaderboard();
+  const [leaderboard, umaLabels] = await Promise.all([
+    fetchActiveLeaderboard(),
+    fetchUmaLabels()
+  ]);
   const uniquePlayers = uniqueByDiscordId(players);
   const summaries = await mapWithConcurrency(uniquePlayers, 3, (player) =>
-    fetchPlayerProfileSummary(player, leaderboard)
+    fetchPlayerProfileSummary(player, leaderboard, umaLabels)
   );
 
   return Object.fromEntries(summaries.map((summary) => [summary.discordId, summary]));
@@ -61,7 +85,8 @@ export async function fetchPlayerProfileSummaries(
 
 async function fetchPlayerProfileSummary(
   player: PrematchPlayer,
-  leaderboard: LeaderboardLookup
+  leaderboard: LeaderboardLookup,
+  umaLabels: Map<string, string>
 ): Promise<PlayerProfileSummary> {
   const profileUrl = `${PROFILE_ORIGIN}/players/${encodeURIComponent(player.discordId)}`;
   const leaderboardEntry = leaderboard.ranksByDiscordId.get(player.discordId);
@@ -117,11 +142,91 @@ async function fetchPlayerProfileSummary(
     pointsPerGame: points !== undefined && matches !== null && matches > 0 ? points / matches : null,
     podiums: stats?.summary?.totalPodiumPlacements ?? null,
     mvpMatches: stats?.summary?.totalMvpMatches ?? null,
+    topUmas: getTopPlayedUmas(stats?.umaEntries, umaLabels),
     statsPrivate,
     fetchedAt: Date.now(),
     profileUrl,
     error
   };
+}
+
+async function fetchUmaLabels(): Promise<Map<string, string>> {
+  const now = Date.now();
+
+  if (cachedUmaLabels !== undefined && now - cachedUmaLabels.fetchedAt < UMA_LABEL_CACHE_TTL_MS) {
+    return cachedUmaLabels.labelsById;
+  }
+
+  try {
+    const cardsAssetUrl = await fetchCardsAssetUrl();
+    const script = await fetchText(cardsAssetUrl);
+    const cards = parseUmaCards(script);
+    const labelsById = new Map(
+      cards
+        .map((card) => {
+          const id = card.cardId;
+
+          if (id === undefined) {
+            return null;
+          }
+
+          return [String(id), formatUmaLabel(card)] as const;
+        })
+        .filter((entry): entry is readonly [string, string] => entry !== null)
+    );
+
+    cachedUmaLabels = {
+      labelsById,
+      fetchedAt: now
+    };
+
+    return labelsById;
+  } catch (caught) {
+    console.warn('[UmaLytics] Unable to load Uma labels:', caught);
+    return cachedUmaLabels?.labelsById ?? new Map();
+  }
+}
+
+async function fetchCardsAssetUrl(): Promise<URL> {
+  const html = await fetchText(new URL('/', PROFILE_ORIGIN));
+  const match = /["'](\/assets\/cards-[^"']+\.js)["']/.exec(html);
+
+  if (match?.[1] === undefined) {
+    throw new Error('Unable to find Uma card labels asset.');
+  }
+
+  return new URL(match[1], PROFILE_ORIGIN);
+}
+
+async function fetchText(url: URL): Promise<string> {
+  const response = await fetch(url, {
+    cache: 'force-cache',
+    credentials: 'omit'
+  });
+
+  if (!response.ok) {
+    throw new ApiRequestError(response.status, `Request failed: ${response.status}`);
+  }
+
+  return await response.text();
+}
+
+function parseUmaCards(script: string): UmaCard[] {
+  const match = /JSON\.parse\(`([\s\S]*?)`\)/.exec(script);
+
+  if (match?.[1] === undefined) {
+    return [];
+  }
+
+  return JSON.parse(match[1]) as UmaCard[];
+}
+
+function formatUmaLabel(card: UmaCard): string {
+  const name = card.name ?? card.charaName ?? String(card.cardId);
+  const title = card.title ?? card.cardTitle;
+  const cleanTitle = title?.trim().replace(/^\[/, '').replace(/\]$/, '');
+
+  return cleanTitle === undefined || cleanTitle.length === 0 ? name : `${name} (${cleanTitle})`;
 }
 
 async function fetchActiveLeaderboard(): Promise<LeaderboardLookup> {
@@ -228,6 +333,40 @@ function getRecordFromUmaEntries(
     }),
     { wins: 0, losses: 0 }
   );
+}
+
+function getTopPlayedUmas(
+  umaEntries: ApiUmaEntry[] | undefined,
+  umaLabels: Map<string, string>
+): PlayerTopUmaSummary[] {
+  if (umaEntries === undefined) {
+    return [];
+  }
+
+  return [...umaEntries]
+    .filter((entry) => entry.umaId !== undefined && (entry.matches ?? 0) > 0)
+    .sort((left, right) => (right.matches ?? 0) - (left.matches ?? 0))
+    .slice(0, 3)
+    .map((entry) => {
+      const umaId = entry.umaId ?? 'unknown';
+      const matches = entry.matches ?? 0;
+      const wins = entry.wins ?? 0;
+      const losses = entry.losses ?? 0;
+      const points = entry.pointsScored ?? 0;
+
+      return {
+        umaId,
+        name: umaLabels.get(umaId) ?? umaId,
+        matches,
+        wins,
+        losses,
+        winRate: wins + losses > 0 ? wins / (wins + losses) : null,
+        points,
+        pointsPerGame: matches > 0 ? points / matches : null,
+        podiums: entry.podiumPlacements ?? 0,
+        mvpMatches: entry.mvpMatches ?? 0
+      };
+    });
 }
 
 function addNullable(left: number | null, right: number | null): number | null {
