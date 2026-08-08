@@ -292,6 +292,22 @@ a.player-name:hover {
   min-height: 91px;
 }
 
+.best-umas li {
+  align-items: start;
+  gap: 2px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.best-umas .uma-name {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.best-umas .uma-meta {
+  justify-self: start;
+}
+
 .top-umas p {
   color: #64748b;
   font-size: 9px;
