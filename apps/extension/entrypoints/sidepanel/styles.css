@@ -53,7 +53,8 @@ body {
   justify-items: end;
 }
 
-.theme-toggle {
+.theme-toggle,
+.refresh-button {
   background: #ffffff;
   border: 1px solid #d9e0ea;
   border-radius: 999px;
@@ -64,6 +65,11 @@ body {
   line-height: 1;
   min-width: 52px;
   padding: 6px 8px;
+}
+
+.refresh-button:disabled {
+  cursor: default;
+  opacity: 0.68;
 }
 
 .status-pill.idle {
@@ -319,6 +325,16 @@ a.player-name:hover {
   text-transform: uppercase;
 }
 
+.best-umas p {
+  color: #475569;
+}
+
+.section-message {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .top-umas ol {
   display: grid;
   gap: 4px;
@@ -374,17 +390,20 @@ a.player-name:hover {
 }
 
 .theme-dark .theme-toggle,
+.theme-dark .refresh-button,
 .theme-dark .empty-state,
 .theme-dark .player-row {
   background: #111827;
   border-color: #263244;
 }
 
-.theme-dark .theme-toggle {
+.theme-dark .theme-toggle,
+.theme-dark .refresh-button {
   color: #dbe7f7;
 }
 
-.theme-dark .theme-toggle:hover {
+.theme-dark .theme-toggle:hover,
+.theme-dark .refresh-button:hover:not(:disabled) {
   border-color: #3b82f6;
 }
 
@@ -427,7 +446,8 @@ a.player-name:hover {
 }
 
 .theme-dark .player-meta,
-.theme-dark .uma-meta {
+.theme-dark .uma-meta,
+.theme-dark .section-message {
   color: #b6c0ce;
 }
 

@@ -29,6 +29,10 @@ export default defineBackground(() => {
       return handlePrematchRosterDetected(message.roster);
     }
 
+    if (message.type === 'profile-refresh-requested') {
+      return handleProfileRefreshRequested(message.roster);
+    }
+
     return undefined;
   });
 });
@@ -39,7 +43,15 @@ async function handlePrematchRosterDetected(roster: PrematchRoster): Promise<voi
   await enrichRosterProfiles(roster);
 }
 
-async function enrichRosterProfiles(roster: PrematchRoster): Promise<void> {
+async function handleProfileRefreshRequested(roster: PrematchRoster): Promise<void> {
+  console.log('[UmaLytics] Profile refresh requested:', roster.matchCode);
+  await enrichRosterProfiles(roster, { forceRefresh: true });
+}
+
+async function enrichRosterProfiles(
+  roster: PrematchRoster,
+  options: { forceRefresh?: boolean } = {}
+): Promise<void> {
   const runId = ++enrichmentRunId;
   const now = Date.now();
   const cachedSnapshot = await getPlayerProfileSummaries();
@@ -47,13 +59,16 @@ async function enrichRosterProfiles(roster: PrematchRoster): Promise<void> {
   const rosterDiscordIds = [...new Set(roster.players.map((player) => player.discordId))];
   const lookupDiscordIds = rosterDiscordIds.filter(isDiscordSnowflake);
   const freshProfiles = getFreshProfiles(cachedProfiles, rosterDiscordIds, now);
+  const retainedProfiles = options.forceRefresh === true
+    ? getRetainedProfiles(cachedProfiles, freshProfiles, rosterDiscordIds)
+    : freshProfiles;
   const missingDiscordIds = lookupDiscordIds.filter(
-    (discordId) => freshProfiles[discordId] === undefined
+    (discordId) => options.forceRefresh === true || freshProfiles[discordId] === undefined
   );
 
   await setPlayerProfileSummaries({
     matchCode: roster.matchCode,
-    profiles: freshProfiles,
+    profiles: retainedProfiles,
     loadingDiscordIds: missingDiscordIds,
     updatedAt: now
   });
@@ -74,7 +89,7 @@ async function enrichRosterProfiles(roster: PrematchRoster): Promise<void> {
     await setPlayerProfileSummaries({
       matchCode: roster.matchCode,
       profiles: {
-        ...freshProfiles,
+        ...retainedProfiles,
         ...fetchedProfiles
       },
       loadingDiscordIds: [],
@@ -88,11 +103,23 @@ async function enrichRosterProfiles(roster: PrematchRoster): Promise<void> {
     console.warn('[UmaLytics] Profile scouting failed:', caught);
     await setPlayerProfileSummaries({
       matchCode: roster.matchCode,
-      profiles: freshProfiles,
+      profiles: retainedProfiles,
       loadingDiscordIds: [],
       updatedAt: Date.now()
     });
   }
+}
+
+function getRetainedProfiles(
+  cachedProfiles: Record<string, PlayerProfileSummary>,
+  freshProfiles: Record<string, PlayerProfileSummary>,
+  discordIds: string[]
+): Record<string, PlayerProfileSummary> {
+  return Object.fromEntries(
+    discordIds
+      .map((discordId) => [discordId, cachedProfiles[discordId] ?? freshProfiles[discordId]] as const)
+      .filter((entry): entry is readonly [string, PlayerProfileSummary] => entry[1] !== undefined)
+  );
 }
 
 function isDiscordSnowflake(value: string): boolean {

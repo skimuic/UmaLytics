@@ -16,6 +16,7 @@ import {
   getLatestPrematchRoster,
   LATEST_PREMATCH_ROSTER_STORAGE_KEY
 } from '../../utils/rosterStorage';
+import { sendProfileRefreshRequest } from '../../utils/messaging';
 
 const TEAM_IDS = ['team1', 'team2'] as const satisfies readonly TeamId[];
 const TEAM_SLOT_COUNT = 5;
@@ -64,6 +65,7 @@ export default function App() {
 
   const teamGroups = useMemo(() => getTeamGroups(roster), [roster]);
   const loadingProfiles = profileSnapshot?.loadingDiscordIds.length ?? 0;
+  const hasRoster = roster !== undefined;
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -77,6 +79,14 @@ export default function App() {
         ? currentKeys.filter((currentKey) => currentKey !== playerKey)
         : [...currentKeys, playerKey]
     );
+  };
+
+  const refreshProfiles = () => {
+    if (roster === undefined || loadingProfiles > 0) {
+      return;
+    }
+
+    void sendProfileRefreshRequest(roster);
   };
 
   return (
@@ -102,6 +112,16 @@ export default function App() {
           >
             {theme === 'dark' ? 'Dark' : 'Light'}
           </button>
+          {hasRoster ? (
+            <button
+              type="button"
+              className="refresh-button"
+              disabled={loadingProfiles > 0}
+              onClick={refreshProfiles}
+            >
+              {loadingProfiles > 0 ? 'Refreshing' : 'Refresh'}
+            </button>
+          ) : null}
           <span className={roster === undefined ? 'status-pill idle' : 'status-pill live'}>
             {roster === undefined ? 'Waiting' : `${roster.players.length}/10`}
           </span>
@@ -195,11 +215,18 @@ function PlayerRow({
   const discordId = getLookupDiscordId(player);
   const profileUrl = profile?.profileUrl ?? player.profileUrl;
   const note =
-    profile?.statsPrivate === true
-      ? 'Stats are private.'
-      : profile?.error !== undefined
-        ? profile.error
-        : undefined;
+    isProfileLoading && discordId !== undefined
+      ? 'Refreshing profile data.'
+      : discordId === undefined
+        ? 'Open their Uma profile once available to scout detailed stats.'
+        : profile === undefined
+          ? 'Profile data has not loaded yet.'
+          : profile?.statsPrivate === true
+            ? 'Stats are private.'
+            : profile?.error !== undefined
+              ? profile.error
+              : undefined;
+  const statsMessage = getStatsMessage(profile, isProfileLoading, discordId);
 
   return (
     <li className={isExpanded ? 'player-row expanded' : 'player-row'}>
@@ -241,8 +268,18 @@ function PlayerRow({
         <StatCell label="Podiums" value={formatNumber(profile?.podiums)} />
         <StatCell label="MVP" value={formatNumber(profile?.mvpMatches)} />
       </div>
-      <TopUmasList topUmas={profile?.topUmas} playerName={player.displayName} />
-      {isExpanded ? <BestUmasList bestUmas={profile?.bestUmas} playerName={player.displayName} /> : null}
+      <TopUmasList
+        topUmas={profile?.topUmas}
+        playerName={player.displayName}
+        emptyMessage={statsMessage}
+      />
+      {isExpanded ? (
+        <BestUmasList
+          bestUmas={profile?.bestUmas}
+          playerName={player.displayName}
+          emptyMessage={statsMessage}
+        />
+      ) : null}
       <p className={note === undefined ? 'player-note empty' : 'player-note'}>{note ?? ' '}</p>
     </li>
   );
@@ -266,7 +303,7 @@ function EmptyPlayerSlot({ slotNumber }: { slotNumber: number }) {
         <StatCell label="Podiums" value="-" />
         <StatCell label="MVP" value="-" />
       </div>
-      <TopUmasList playerName={`empty slot ${slotNumber}`} />
+      <TopUmasList playerName={`empty slot ${slotNumber}`} emptyMessage="Waiting for player." />
       <p className="player-note empty"> </p>
     </li>
   );
@@ -291,71 +328,87 @@ function StatCell({ label, value }: { label: string; value: string }) {
 
 function TopUmasList({
   topUmas,
-  playerName
+  playerName,
+  emptyMessage
 }: {
   topUmas?: PlayerProfileSummary['topUmas'];
   playerName: string;
+  emptyMessage?: string;
 }) {
   const slots = Array.from({ length: 3 }, (_, index) => topUmas?.[index]);
+  const shouldShowMessage = topUmas === undefined || topUmas.length === 0;
 
   return (
     <div className="top-umas" aria-label={`${playerName} most played Umas`}>
       <p>Most Played</p>
-      <ol>
-        {slots.map((uma, index) => (
-          uma === undefined ? (
-            <li key={`empty-uma:${index}`} className="empty-uma-row">
-              <span className="uma-name">-</span>
-              <span className="uma-meta">-</span>
-            </li>
-          ) : (
-            <li key={uma.umaId}>
-              <span className="uma-name" title={uma.name}>
-                {uma.name}
-              </span>
-              <span className="uma-meta">
-                {uma.matches} GP - {formatPercent(uma.winRate)} - {formatDecimal(uma.pointsPerGame)} PPG
-              </span>
-            </li>
-          )
-        ))}
-      </ol>
+      {shouldShowMessage ? (
+        <span className="section-message">{emptyMessage ?? 'No ranked Uma data found.'}</span>
+      ) : (
+        <ol>
+          {slots.map((uma, index) => (
+            uma === undefined ? (
+              <li key={`empty-uma:${index}`} className="empty-uma-row">
+                <span className="uma-name">-</span>
+                <span className="uma-meta">-</span>
+              </li>
+            ) : (
+              <li key={uma.umaId}>
+                <span className="uma-name" title={uma.name}>
+                  {uma.name}
+                </span>
+                <span className="uma-meta">
+                  {uma.matches} GP - {formatPercent(uma.winRate)} - {formatDecimal(uma.pointsPerGame)} PPG
+                </span>
+              </li>
+            )
+          ))}
+        </ol>
+      )}
     </div>
   );
 }
 
 function BestUmasList({
   bestUmas,
-  playerName
+  playerName,
+  emptyMessage
 }: {
   bestUmas?: PlayerProfileSummary['bestUmas'];
   playerName: string;
+  emptyMessage?: string;
 }) {
   const slots = Array.from({ length: 5 }, (_, index) => bestUmas?.[index]);
+  const shouldShowMessage = bestUmas === undefined || bestUmas.length === 0;
 
   return (
     <div className="top-umas best-umas" aria-label={`${playerName} best performing Umas`}>
       <p>Best Performing</p>
-      <ol>
-        {slots.map((uma, index) => (
-          uma === undefined ? (
-            <li key={`empty-best-uma:${index}`} className="empty-uma-row">
-              <span className="uma-name">-</span>
-              <span className="uma-meta">-</span>
-            </li>
-          ) : (
-            <li key={uma.umaId}>
-              <span className="uma-name" title={uma.name}>
-                {uma.name}
-              </span>
-              <span className="uma-meta">
-                {formatNumber(uma.performanceScore)} score - {formatDecimal(uma.pointsPerGame)} PPG -{' '}
-                {formatPercent(uma.winRate)} - {uma.matches} GP
-              </span>
-            </li>
-          )
-        ))}
-      </ol>
+      {shouldShowMessage ? (
+        <span className="section-message">
+          {emptyMessage ?? 'No Umas meet the 4 game sample yet.'}
+        </span>
+      ) : (
+        <ol>
+          {slots.map((uma, index) => (
+            uma === undefined ? (
+              <li key={`empty-best-uma:${index}`} className="empty-uma-row">
+                <span className="uma-name">-</span>
+                <span className="uma-meta">-</span>
+              </li>
+            ) : (
+              <li key={uma.umaId}>
+                <span className="uma-name" title={uma.name}>
+                  {uma.name}
+                </span>
+                <span className="uma-meta">
+                  {formatNumber(uma.performanceScore)} score - {formatDecimal(uma.pointsPerGame)} PPG -{' '}
+                  {formatPercent(uma.winRate)} - {uma.matches} GP
+                </span>
+              </li>
+            )
+          ))}
+        </ol>
+      )}
     </div>
   );
 }
@@ -442,6 +495,34 @@ function formatDecimal(value: number | null | undefined): string {
 
 function formatNumber(value: number | null | undefined): string {
   return value === undefined || value === null ? '-' : value.toLocaleString();
+}
+
+function getStatsMessage(
+  profile: PlayerProfileSummary | undefined,
+  isProfileLoading: boolean,
+  discordId: string | undefined
+): string | undefined {
+  if (isProfileLoading && discordId !== undefined) {
+    return 'Loading ranked Uma stats.';
+  }
+
+  if (discordId === undefined) {
+    return 'Profile lookup is unavailable from this room page.';
+  }
+
+  if (profile?.statsPrivate === true) {
+    return 'Ranked Uma stats are private.';
+  }
+
+  if (profile?.error !== undefined) {
+    return 'Unable to load ranked Uma stats.';
+  }
+
+  if (profile === undefined) {
+    return 'Profile data has not loaded yet.';
+  }
+
+  return undefined;
 }
 
 async function getStoredTheme(): Promise<SidePanelTheme> {
