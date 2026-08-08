@@ -7,7 +7,7 @@
     "dev": "wxt",
     "build": "wxt build",
     "postinstall": "wxt prepare",
-    "typecheck": "tsc --project tsconfig.json"
+    "typecheck": "wxt prepare && tsc --project tsconfig.json"
   },
   "dependencies": {
     "@umalytics/shared": "workspace:*",

@@ -23,8 +23,12 @@ import { MANUAL_PROFILE_REFRESH_COOLDOWN_MS } from '../../utils/profileConstants
 const TEAM_IDS = ['team1', 'team2'] as const satisfies readonly TeamId[];
 const TEAM_SLOT_COUNT = 5;
 const SIDE_PANEL_THEME_STORAGE_KEY = 'sidePanelTheme';
+const SCOUT_POPOUT_PATH = '/scout.html';
+const SCOUT_POPOUT_WIDTH = 540;
+const SCOUT_POPOUT_HEIGHT = 900;
 
 type SidePanelTheme = 'dark' | 'light';
+type ScoutSurface = 'sidepanel' | 'popout';
 type NotableBadgeTone = 'rank' | 'scoring' | 'private';
 
 interface NotableBadge {
@@ -32,7 +36,7 @@ interface NotableBadge {
   tone: NotableBadgeTone;
 }
 
-export default function App() {
+export default function App({ surface = 'sidepanel' }: { surface?: ScoutSurface }) {
   const [roster, setRoster] = useState<PrematchRoster | undefined>();
   const [profileSnapshot, setProfileSnapshot] = useState<PlayerProfileSummariesSnapshot | undefined>();
   const [theme, setTheme] = useState<SidePanelTheme>('dark');
@@ -115,8 +119,18 @@ export default function App() {
     void sendProfileRefreshRequest(roster);
   };
 
+  const openPopout = () => {
+    void browser.windows.create({
+      url: browser.runtime.getURL(SCOUT_POPOUT_PATH),
+      type: 'popup',
+      width: SCOUT_POPOUT_WIDTH,
+      height: SCOUT_POPOUT_HEIGHT,
+      focused: true
+    });
+  };
+
   return (
-    <main className={`app-shell theme-${theme}`}>
+    <main className={`app-shell theme-${theme} surface-${surface}`}>
       <header className="app-header">
         <div>
           <h1>UmaLytics</h1>
@@ -148,6 +162,11 @@ export default function App() {
                   : refreshCooldownMs > 0
                     ? `Wait ${Math.ceil(refreshCooldownMs / 1000)}s`
                     : 'Refresh'}
+              </button>
+            ) : null}
+            {surface === 'sidepanel' ? (
+              <button type="button" className="popout-button" onClick={openPopout}>
+                Popout
               </button>
             ) : null}
           </div>

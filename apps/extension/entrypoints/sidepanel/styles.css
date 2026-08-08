@@ -15,6 +15,10 @@ body {
   padding: 14px;
 }
 
+.surface-popout {
+  min-width: 420px;
+}
+
 .app-header {
   align-items: flex-start;
   display: flex;
@@ -67,7 +71,8 @@ body {
 }
 
 .theme-toggle,
-.refresh-button {
+.refresh-button,
+.popout-button {
   background: #ffffff;
   border: 1px solid #d9e0ea;
   border-radius: 999px;
@@ -539,6 +544,7 @@ a.player-name:hover {
 
 .theme-dark .theme-toggle,
 .theme-dark .refresh-button,
+.theme-dark .popout-button,
 .theme-dark .empty-state,
 .theme-dark .player-row {
   background: #111827;
@@ -546,12 +552,14 @@ a.player-name:hover {
 }
 
 .theme-dark .theme-toggle,
-.theme-dark .refresh-button {
+.theme-dark .refresh-button,
+.theme-dark .popout-button {
   color: #dbe7f7;
 }
 
 .theme-dark .theme-toggle:hover,
-.theme-dark .refresh-button:hover:not(:disabled) {
+.theme-dark .refresh-button:hover:not(:disabled),
+.theme-dark .popout-button:hover {
   border-color: #3b82f6;
 }
 
