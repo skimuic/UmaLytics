@@ -18,14 +18,20 @@ import {
 } from '../../utils/rosterStorage';
 
 const TEAM_IDS = ['team1', 'team2'] as const satisfies readonly TeamId[];
+const TEAM_SLOT_COUNT = 5;
+const SIDE_PANEL_THEME_STORAGE_KEY = 'sidePanelTheme';
+
+type SidePanelTheme = 'dark' | 'light';
 
 export default function App() {
   const [roster, setRoster] = useState<PrematchRoster | undefined>();
   const [profileSnapshot, setProfileSnapshot] = useState<PlayerProfileSummariesSnapshot | undefined>();
+  const [theme, setTheme] = useState<SidePanelTheme>('dark');
 
   useEffect(() => {
     void getLatestPrematchRoster().then(setRoster);
     void getPlayerProfileSummaries().then(setProfileSnapshot);
+    void getStoredTheme().then(setTheme);
 
     const handleStorageChange = (
       changes: Record<string, Browser.storage.StorageChange>,
@@ -58,8 +64,14 @@ export default function App() {
   const teamGroups = useMemo(() => getTeamGroups(roster), [roster]);
   const loadingProfiles = profileSnapshot?.loadingDiscordIds.length ?? 0;
 
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    void browser.storage.local.set({ [SIDE_PANEL_THEME_STORAGE_KEY]: nextTheme });
+  };
+
   return (
-    <main className="app-shell">
+    <main className={`app-shell theme-${theme}`}>
       <header className="app-header">
         <div>
           <h1>UmaLytics</h1>
@@ -71,9 +83,20 @@ export default function App() {
                 : `Match ${roster.matchCode}`}
           </p>
         </div>
-        <span className={roster === undefined ? 'status-pill idle' : 'status-pill live'}>
-          {roster === undefined ? 'Waiting' : `${roster.players.length}/10`}
-        </span>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="theme-toggle"
+            role="switch"
+            aria-checked={theme === 'dark'}
+            onClick={toggleTheme}
+          >
+            {theme === 'dark' ? 'Dark' : 'Light'}
+          </button>
+          <span className={roster === undefined ? 'status-pill idle' : 'status-pill live'}>
+            {roster === undefined ? 'Waiting' : `${roster.players.length}/10`}
+          </span>
+        </div>
       </header>
 
       {roster === undefined ? (
@@ -106,23 +129,29 @@ function TeamSection({
   profiles: Record<string, PlayerProfileSummary>;
   loadingDiscordIds: string[];
 }) {
+  const playerSlots = Array.from({ length: TEAM_SLOT_COUNT }, (_, index) => team.players[index]);
+
   return (
     <section className="team-section">
       <header className="team-header">
         <div>
           <h2>{team.name ?? team.id}</h2>
-          <p>{team.players.length} players</p>
+          <p>{Math.min(team.players.length, TEAM_SLOT_COUNT)}/{TEAM_SLOT_COUNT} players</p>
         </div>
       </header>
 
       <ol className="player-list">
-        {team.players.map((player) => (
-          <PlayerRow
-            key={`${player.discordId}:${player.userId}`}
-            player={player}
-            profile={profiles[player.discordId]}
-            isProfileLoading={loadingDiscordIds.includes(player.discordId)}
-          />
+        {playerSlots.map((player, index) => (
+          player === undefined ? (
+            <EmptyPlayerSlot key={`${team.id}:empty:${index}`} slotNumber={index + 1} />
+          ) : (
+            <PlayerRow
+              key={`${player.discordId}:${player.userId}`}
+              player={player}
+              profile={profiles[player.discordId]}
+              isProfileLoading={loadingDiscordIds.includes(player.discordId)}
+            />
+          )
         ))}
       </ol>
     </section>
@@ -142,6 +171,12 @@ function PlayerRow({
   const tags = getPlayerTags(player);
   const discordId = getLookupDiscordId(player);
   const profileUrl = profile?.profileUrl ?? player.profileUrl;
+  const note =
+    profile?.statsPrivate === true
+      ? 'Stats are private.'
+      : profile?.error !== undefined
+        ? profile.error
+        : undefined;
 
   return (
     <li className="player-row">
@@ -154,9 +189,7 @@ function PlayerRow({
           </a>
         )}
         <span className="player-id">{discordId ?? 'Profile unavailable from room page'}</span>
-        {profile?.title !== null && profile?.title !== undefined ? (
-          <span className="player-title">{profile.title}</span>
-        ) : null}
+        <span className="player-title">{profile?.title ?? ' '}</span>
       </div>
       <div className="player-meta">
         <span>{formatRank(profile, isProfileLoading && discordId !== undefined)}</span>
@@ -175,28 +208,32 @@ function PlayerRow({
         <StatCell label="Podiums" value={formatNumber(profile?.podiums)} />
         <StatCell label="MVP" value={formatNumber(profile?.mvpMatches)} />
       </div>
-      {profile?.topUmas !== undefined && profile.topUmas.length > 0 ? (
-        <div className="top-umas" aria-label={`${player.displayName} most played Umas`}>
-          <p>Most Played</p>
-          <ol>
-            {profile.topUmas.map((uma) => (
-              <li key={uma.umaId}>
-                <span className="uma-name" title={uma.name}>
-                  {uma.name}
-                </span>
-                <span className="uma-meta">
-                  {uma.matches} GP - {formatPercent(uma.winRate)} - {formatDecimal(uma.pointsPerGame)} PPG
-                </span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      ) : null}
-      {profile?.statsPrivate === true ? (
-        <p className="player-note">Stats are private.</p>
-      ) : profile?.error !== undefined ? (
-        <p className="player-note">{profile.error}</p>
-      ) : null}
+      <TopUmasList topUmas={profile?.topUmas} playerName={player.displayName} />
+      <p className={note === undefined ? 'player-note empty' : 'player-note'}>{note ?? ' '}</p>
+    </li>
+  );
+}
+
+function EmptyPlayerSlot({ slotNumber }: { slotNumber: number }) {
+  return (
+    <li className="player-row empty-player-row">
+      <div className="player-main">
+        <span className="player-name">Waiting for player</span>
+        <span className="player-id">Slot {slotNumber}</span>
+        <span className="player-title"> </span>
+      </div>
+      <div className="player-meta">
+        <span>Open slot</span>
+      </div>
+      <div className="scouting-grid" aria-label={`Empty player slot ${slotNumber}`}>
+        <StatCell label="W-L" value="-" />
+        <StatCell label="Win" value="-" />
+        <StatCell label="Pts/GP" value="-" />
+        <StatCell label="Podiums" value="-" />
+        <StatCell label="MVP" value="-" />
+      </div>
+      <TopUmasList playerName={`empty slot ${slotNumber}`} />
+      <p className="player-note empty"> </p>
     </li>
   );
 }
@@ -211,6 +248,41 @@ function StatCell({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </span>
+  );
+}
+
+function TopUmasList({
+  topUmas,
+  playerName
+}: {
+  topUmas?: PlayerProfileSummary['topUmas'];
+  playerName: string;
+}) {
+  const slots = Array.from({ length: 3 }, (_, index) => topUmas?.[index]);
+
+  return (
+    <div className="top-umas" aria-label={`${playerName} most played Umas`}>
+      <p>Most Played</p>
+      <ol>
+        {slots.map((uma, index) => (
+          uma === undefined ? (
+            <li key={`empty-uma:${index}`} className="empty-uma-row">
+              <span className="uma-name">-</span>
+              <span className="uma-meta">-</span>
+            </li>
+          ) : (
+            <li key={uma.umaId}>
+              <span className="uma-name" title={uma.name}>
+                {uma.name}
+              </span>
+              <span className="uma-meta">
+                {uma.matches} GP - {formatPercent(uma.winRate)} - {formatDecimal(uma.pointsPerGame)} PPG
+              </span>
+            </li>
+          )
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -296,4 +368,11 @@ function formatDecimal(value: number | null | undefined): string {
 
 function formatNumber(value: number | null | undefined): string {
   return value === undefined || value === null ? '-' : value.toLocaleString();
+}
+
+async function getStoredTheme(): Promise<SidePanelTheme> {
+  const values = await browser.storage.local.get(SIDE_PANEL_THEME_STORAGE_KEY);
+  const storedTheme = values[SIDE_PANEL_THEME_STORAGE_KEY];
+
+  return storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'dark';
 }

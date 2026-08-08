@@ -46,6 +46,26 @@ body {
   white-space: nowrap;
 }
 
+.header-actions {
+  align-items: flex-end;
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+
+.theme-toggle {
+  background: #ffffff;
+  border: 1px solid #d9e0ea;
+  border-radius: 999px;
+  color: #334155;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  min-width: 52px;
+  padding: 6px 8px;
+}
+
 .status-pill.idle {
   background: #e5e7eb;
   color: #475569;
@@ -101,6 +121,7 @@ body {
 .player-list {
   display: grid;
   gap: 6px;
+  grid-template-rows: repeat(5, 218px);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -112,13 +133,15 @@ body {
   border-radius: 8px;
   display: grid;
   gap: 5px;
-  min-height: 58px;
+  height: 218px;
+  overflow: hidden;
   padding: 9px 10px;
 }
 
 .player-main {
   display: grid;
   gap: 2px;
+  min-height: 49px;
   min-width: 0;
 }
 
@@ -157,6 +180,7 @@ body {
   font-size: 12px;
   gap: 5px;
   line-height: 1.2;
+  min-height: 24px;
 }
 
 .player-tag {
@@ -207,13 +231,19 @@ body {
   color: #b45309;
   font-size: 11px;
   line-height: 1.3;
+  min-height: 14px;
   margin: 0;
+}
+
+.player-note.empty {
+  visibility: hidden;
 }
 
 .top-umas {
   border-top: 1px solid #edf1f6;
   display: grid;
   gap: 5px;
+  min-height: 67px;
   padding-top: 6px;
 }
 
@@ -258,4 +288,94 @@ body {
   font-size: 10px;
   line-height: 1.2;
   white-space: nowrap;
+}
+
+.empty-player-row {
+  opacity: 0.72;
+}
+
+.empty-uma-row {
+  opacity: 0.62;
+}
+
+.theme-dark {
+  background: #080d18;
+  color: #e5edf7;
+}
+
+.theme-dark .app-header p,
+.theme-dark .team-header p,
+.theme-dark .player-id,
+.theme-dark .top-umas p,
+.theme-dark .stat-cell span {
+  color: #94a3b8;
+}
+
+.theme-dark .theme-toggle,
+.theme-dark .empty-state,
+.theme-dark .player-row {
+  background: #111827;
+  border-color: #263244;
+}
+
+.theme-dark .theme-toggle {
+  color: #dbe7f7;
+}
+
+.theme-dark .theme-toggle:hover {
+  border-color: #3b82f6;
+}
+
+.theme-dark .status-pill.idle {
+  background: #263244;
+  color: #cbd5e1;
+}
+
+.theme-dark .status-pill.live {
+  background: #123a2a;
+  color: #86efac;
+}
+
+.theme-dark .empty-state h2,
+.theme-dark .team-header h2,
+.theme-dark .player-name,
+.theme-dark .stat-cell strong,
+.theme-dark .uma-name {
+  color: #eef4ff;
+}
+
+.theme-dark .player-name:hover {
+  color: #93c5fd;
+}
+
+.theme-dark .player-title {
+  color: #7dd3fc;
+}
+
+.theme-dark .player-meta,
+.theme-dark .uma-meta {
+  color: #cbd5e1;
+}
+
+.theme-dark .player-tag {
+  background: #1f2a3a;
+  color: #dbe7f7;
+}
+
+.theme-dark .stat-cell {
+  background: #0b1220;
+  border-color: #263244;
+}
+
+.theme-dark .top-umas {
+  border-top-color: #263244;
+}
+
+.theme-dark .player-note {
+  color: #fbbf24;
+}
+
+.theme-light {
+  background: #f7f8fa;
+  color: #17202a;
 }
