@@ -3,6 +3,7 @@ import type { PlayerProfileSummary, PlayerTopUmaSummary, PrematchPlayer } from '
 const API_ORIGIN = 'https://drafter-api.uma.guide';
 const PROFILE_ORIGIN = 'https://drafter.uma.guide';
 const UMA_LABEL_CACHE_TTL_MS = 60 * 60 * 1000;
+const BEST_UMA_MIN_MATCHES = 4;
 
 interface ApiPlayerProfile {
   displayName?: string;
@@ -143,6 +144,7 @@ async function fetchPlayerProfileSummary(
     podiums: stats?.summary?.totalPodiumPlacements ?? null,
     mvpMatches: stats?.summary?.totalMvpMatches ?? null,
     topUmas: getTopPlayedUmas(stats?.umaEntries, umaLabels),
+    bestUmas: getBestPerformingUmas(stats?.umaEntries, umaLabels),
     statsPrivate,
     fetchedAt: Date.now(),
     profileUrl,
@@ -360,26 +362,77 @@ function getTopPlayedUmas(
     .filter((entry) => entry.umaId !== undefined && (entry.matches ?? 0) > 0)
     .sort((left, right) => (right.matches ?? 0) - (left.matches ?? 0))
     .slice(0, 3)
-    .map((entry) => {
-      const umaId = entry.umaId ?? 'unknown';
-      const matches = entry.matches ?? 0;
-      const wins = entry.wins ?? 0;
-      const losses = entry.losses ?? 0;
-      const points = entry.pointsScored ?? 0;
+    .map((entry) => buildUmaSummary(entry, umaLabels));
+}
 
-      return {
-        umaId,
-        name: umaLabels.get(umaId) ?? umaId,
-        matches,
-        wins,
-        losses,
-        winRate: wins + losses > 0 ? wins / (wins + losses) : null,
-        points,
-        pointsPerGame: matches > 0 ? points / matches : null,
-        podiums: entry.podiumPlacements ?? 0,
-        mvpMatches: entry.mvpMatches ?? 0
-      };
-    });
+function getBestPerformingUmas(
+  umaEntries: ApiUmaEntry[] | undefined,
+  umaLabels: Map<string, string>
+): PlayerTopUmaSummary[] {
+  if (umaEntries === undefined) {
+    return [];
+  }
+
+  return [...umaEntries]
+    .filter((entry) => entry.umaId !== undefined && (entry.matches ?? 0) >= BEST_UMA_MIN_MATCHES)
+    .map((entry) => buildUmaSummary(entry, umaLabels))
+    .sort((left, right) => {
+      const scoreDelta = (right.performanceScore ?? 0) - (left.performanceScore ?? 0);
+
+      if (scoreDelta !== 0) return scoreDelta;
+
+      const ppgDelta = (right.pointsPerGame ?? 0) - (left.pointsPerGame ?? 0);
+
+      if (ppgDelta !== 0) return ppgDelta;
+
+      const winRateDelta = (right.winRate ?? 0) - (left.winRate ?? 0);
+
+      if (winRateDelta !== 0) return winRateDelta;
+
+      return right.matches - left.matches;
+    })
+    .slice(0, 5);
+}
+
+function buildUmaSummary(
+  entry: ApiUmaEntry,
+  umaLabels: Map<string, string>
+): PlayerTopUmaSummary {
+  const umaId = entry.umaId ?? 'unknown';
+  const matches = entry.matches ?? 0;
+  const wins = entry.wins ?? 0;
+  const losses = entry.losses ?? 0;
+  const points = entry.pointsScored ?? 0;
+  const podiums = entry.podiumPlacements ?? 0;
+  const winRate = wins + losses > 0 ? wins / (wins + losses) : null;
+  const pointsPerGame = matches > 0 ? points / matches : null;
+  const podiumRate = matches > 0 ? podiums / (matches * 3) : null;
+
+  return {
+    umaId,
+    name: umaLabels.get(umaId) ?? umaId,
+    matches,
+    wins,
+    losses,
+    winRate,
+    points,
+    pointsPerGame,
+    podiums,
+    mvpMatches: entry.mvpMatches ?? 0,
+    performanceScore: calculatePerformanceScore(pointsPerGame, winRate, podiumRate)
+  };
+}
+
+function calculatePerformanceScore(
+  pointsPerGame: number | null,
+  winRate: number | null,
+  podiumRate: number | null
+): number {
+  const normalizedPpg = Math.min((pointsPerGame ?? 0) / 8, 1);
+  const normalizedWinRate = winRate ?? 0;
+  const normalizedPodiumRate = podiumRate ?? 0;
+
+  return Math.round((normalizedPpg * 0.6 + normalizedWinRate * 0.3 + normalizedPodiumRate * 0.1) * 100);
 }
 
 function addNullable(left: number | null, right: number | null): number | null {

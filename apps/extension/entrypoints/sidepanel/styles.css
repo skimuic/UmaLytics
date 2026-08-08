@@ -138,6 +138,10 @@ body {
   padding: 9px 10px;
 }
 
+.player-row.expanded {
+  height: 313px;
+}
+
 .player-main {
   display: grid;
   gap: 2px;
@@ -146,15 +150,41 @@ body {
 }
 
 .player-name {
+  background: transparent;
+  border: 0;
   color: #0f172a;
+  cursor: pointer;
   font-size: 13px;
   font-weight: 700;
   line-height: 1.25;
   overflow-wrap: anywhere;
+  padding: 0;
+  text-align: left;
   text-decoration: none;
 }
 
 .player-name:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.player-name-row {
+  align-items: baseline;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+}
+
+.profile-link {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.profile-link:hover {
   color: #2563eb;
   text-decoration: underline;
 }
@@ -245,6 +275,10 @@ body {
   gap: 5px;
   min-height: 67px;
   padding-top: 6px;
+}
+
+.best-umas {
+  min-height: 91px;
 }
 
 .top-umas p {
@@ -346,6 +380,14 @@ body {
 }
 
 .theme-dark .player-name:hover {
+  color: #93c5fd;
+}
+
+.theme-dark .profile-link {
+  color: #8f9bad;
+}
+
+.theme-dark .profile-link:hover {
   color: #93c5fd;
 }
 

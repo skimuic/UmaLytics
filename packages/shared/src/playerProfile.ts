@@ -9,6 +9,7 @@ export interface PlayerTopUmaSummary {
   pointsPerGame: number | null;
   podiums: number;
   mvpMatches: number;
+  performanceScore?: number;
 }
 
 export interface PlayerProfileSummary {
@@ -30,6 +31,7 @@ export interface PlayerProfileSummary {
   podiums?: number | null;
   mvpMatches?: number | null;
   topUmas?: PlayerTopUmaSummary[];
+  bestUmas?: PlayerTopUmaSummary[];
   statsPrivate?: boolean;
   fetchedAt: number;
   profileUrl: string;
