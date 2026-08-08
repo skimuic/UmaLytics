@@ -1,11 +1,31 @@
 const SYNCED_DRAFT_STATE_MESSAGE_TYPE = 'umalytics:synced-draft-state';
+const SYNC_EFFECT_LOG_PREFIX = '[SYNC EFFECT] Starting sync';
 
 type JsonRecord = Record<string, unknown>;
 
 export default defineUnlistedScript(() => {
+  installSyncConsoleHook();
   installWebSocketHook();
   scanBrowserStorageOnce();
 });
+
+function installSyncConsoleHook(): void {
+  const methods = ['debug', 'log', 'info'] as const;
+
+  for (const method of methods) {
+    const originalMethod = window.console[method].bind(window.console);
+
+    window.console[method] = (...args: unknown[]) => {
+      if (args[0] === SYNC_EFFECT_LOG_PREFIX) {
+        for (const arg of args.slice(1)) {
+          inspectPossiblePayload(arg);
+        }
+      }
+
+      originalMethod(...args);
+    };
+  }
+}
 
 function installWebSocketHook(): void {
   const OriginalWebSocket = window.WebSocket;
