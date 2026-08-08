@@ -5,6 +5,10 @@ const PROFILE_ORIGIN = 'https://drafter.uma.guide';
 const UMA_LABEL_CACHE_TTL_MS = 60 * 60 * 1000;
 const BEST_UMA_MIN_MATCHES = 4;
 const BEST_UMA_SCORE_VERSION = 2;
+const API_RATE_LIMIT_BACKOFF_MS = 30 * 1000;
+const API_SERVER_ERROR_BACKOFF_MS = 10 * 1000;
+
+let apiBackoffUntil = 0;
 
 interface ApiPlayerProfile {
   displayName?: string;
@@ -273,16 +277,65 @@ async function fetchActiveLeaderboard(): Promise<LeaderboardLookup> {
 }
 
 async function fetchJson<T>(path: string): Promise<T> {
+  await waitForApiBackoff();
+
   const response = await fetch(new URL(path, API_ORIGIN), {
     cache: 'no-store',
     credentials: 'omit'
   });
 
   if (!response.ok) {
+    registerApiBackoff(response);
     throw new ApiRequestError(response.status, `Request failed: ${response.status}`);
   }
 
   return (await response.json()) as T;
+}
+
+async function waitForApiBackoff(): Promise<void> {
+  const waitMs = apiBackoffUntil - Date.now();
+
+  if (waitMs > 0) {
+    await delay(waitMs);
+  }
+}
+
+function registerApiBackoff(response: Response): void {
+  if (response.status === 429) {
+    const retryAfterMs = getRetryAfterMs(response.headers.get('retry-after'));
+    apiBackoffUntil = Math.max(apiBackoffUntil, Date.now() + retryAfterMs);
+    return;
+  }
+
+  if (response.status >= 500) {
+    apiBackoffUntil = Math.max(apiBackoffUntil, Date.now() + API_SERVER_ERROR_BACKOFF_MS);
+  }
+}
+
+function getRetryAfterMs(retryAfter: string | null): number {
+  if (retryAfter === null) {
+    return API_RATE_LIMIT_BACKOFF_MS;
+  }
+
+  const seconds = Number(retryAfter);
+
+  if (Number.isFinite(seconds)) {
+    return Math.max(seconds * 1000, API_RATE_LIMIT_BACKOFF_MS);
+  }
+
+  const retryAt = Date.parse(retryAfter);
+
+  if (Number.isNaN(retryAt)) {
+    return API_RATE_LIMIT_BACKOFF_MS;
+  }
+
+  return Math.max(retryAt - Date.now(), API_RATE_LIMIT_BACKOFF_MS);
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(resolve, ms);
+  });
 }
 
 function uniqueByDiscordId(players: PrematchPlayer[]): PrematchPlayer[] {

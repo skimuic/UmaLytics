@@ -21,6 +21,7 @@ import { sendProfileRefreshRequest } from '../../utils/messaging';
 const TEAM_IDS = ['team1', 'team2'] as const satisfies readonly TeamId[];
 const TEAM_SLOT_COUNT = 5;
 const SIDE_PANEL_THEME_STORAGE_KEY = 'sidePanelTheme';
+const MANUAL_REFRESH_COOLDOWN_MS = 60 * 1000;
 
 type SidePanelTheme = 'dark' | 'light';
 
@@ -29,6 +30,7 @@ export default function App() {
   const [profileSnapshot, setProfileSnapshot] = useState<PlayerProfileSummariesSnapshot | undefined>();
   const [theme, setTheme] = useState<SidePanelTheme>('dark');
   const [expandedPlayerKeys, setExpandedPlayerKeys] = useState<string[]>([]);
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     void getLatestPrematchRoster().then(setRoster);
@@ -63,9 +65,25 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (roster === undefined) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1_000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [roster]);
+
   const teamGroups = useMemo(() => getTeamGroups(roster), [roster]);
   const loadingProfiles = profileSnapshot?.loadingDiscordIds.length ?? 0;
   const hasRoster = roster !== undefined;
+  const refreshCooldownMs = getRefreshCooldownMs(profileSnapshot?.updatedAt, now);
+  const canRefresh = hasRoster && loadingProfiles === 0 && refreshCooldownMs === 0;
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -82,7 +100,7 @@ export default function App() {
   };
 
   const refreshProfiles = () => {
-    if (roster === undefined || loadingProfiles > 0) {
+    if (roster === undefined || !canRefresh) {
       return;
     }
 
@@ -117,10 +135,14 @@ export default function App() {
               <button
                 type="button"
                 className="refresh-button"
-                disabled={loadingProfiles > 0}
+                disabled={!canRefresh}
                 onClick={refreshProfiles}
               >
-                {loadingProfiles > 0 ? 'Refreshing' : 'Refresh'}
+                {loadingProfiles > 0
+                  ? 'Refreshing'
+                  : refreshCooldownMs > 0
+                    ? `Wait ${Math.ceil(refreshCooldownMs / 1000)}s`
+                    : 'Refresh'}
               </button>
             ) : null}
           </div>
@@ -501,6 +523,14 @@ function formatDecimal(value: number | null | undefined): string {
 
 function formatNumber(value: number | null | undefined): string {
   return value === undefined || value === null ? '-' : value.toLocaleString();
+}
+
+function getRefreshCooldownMs(updatedAt: number | undefined, now: number): number {
+  if (updatedAt === undefined) {
+    return 0;
+  }
+
+  return Math.max(updatedAt + MANUAL_REFRESH_COOLDOWN_MS - now, 0);
 }
 
 function getStatsMessage(

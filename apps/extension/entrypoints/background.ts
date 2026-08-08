@@ -9,6 +9,7 @@ import {
 import { getLatestPrematchRoster, setLatestPrematchRoster } from '../utils/rosterStorage';
 
 const PROFILE_CACHE_TTL_MS = 15 * 60 * 1000;
+const MANUAL_REFRESH_COOLDOWN_MS = 60 * 1000;
 const REQUIRED_BEST_UMA_SCORE_VERSION = 2;
 
 let enrichmentRunId = 0;
@@ -44,6 +45,14 @@ async function handlePrematchRosterDetected(roster: PrematchRoster): Promise<voi
 }
 
 async function handleProfileRefreshRequested(roster: PrematchRoster): Promise<void> {
+  const cachedSnapshot = await getPlayerProfileSummaries();
+  const cooldownMs = getRefreshCooldownMs(cachedSnapshot?.updatedAt, Date.now());
+
+  if (cooldownMs > 0) {
+    console.log('[UmaLytics] Profile refresh skipped during cooldown:', Math.ceil(cooldownMs / 1000));
+    return;
+  }
+
   console.log('[UmaLytics] Profile refresh requested:', roster.matchCode);
   await enrichRosterProfiles(roster, { forceRefresh: true });
 }
@@ -155,4 +164,12 @@ function hasResolvedTopUmaLabels(profile: PlayerProfileSummary): boolean {
   }
 
   return topUmas.every((uma) => uma.name !== uma.umaId);
+}
+
+function getRefreshCooldownMs(updatedAt: number | undefined, now: number): number {
+  if (updatedAt === undefined) {
+    return 0;
+  }
+
+  return Math.max(updatedAt + MANUAL_REFRESH_COOLDOWN_MS - now, 0);
 }
