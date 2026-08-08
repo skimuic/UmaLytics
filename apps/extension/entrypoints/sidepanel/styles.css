@@ -140,9 +140,8 @@ body {
 
 .player-row.expanded {
   height: auto;
-  min-height: 326px;
   overflow: visible;
-  padding-bottom: 13px;
+  padding-bottom: 9px;
 }
 
 .player-main {
