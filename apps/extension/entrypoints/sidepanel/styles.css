@@ -163,6 +163,18 @@ body {
   padding-bottom: 9px;
 }
 
+.player-row.rank-highlight {
+  box-shadow: inset 2px 0 0 #f59e0b;
+}
+
+.player-row.scoring-highlight {
+  box-shadow: inset 2px 0 0 #0ea5e9;
+}
+
+.player-row.private-highlight {
+  box-shadow: inset 2px 0 0 #94a3b8;
+}
+
 .player-main {
   display: grid;
   gap: 2px;
@@ -261,6 +273,21 @@ a.player-name:hover {
   font-size: 11px;
   font-weight: 700;
   padding: 3px 6px;
+}
+
+.notable-tag.rank {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.notable-tag.scoring {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.notable-tag.private {
+  background: #f1f5f9;
+  color: #475569;
 }
 
 .scouting-grid {
@@ -581,6 +608,21 @@ a.player-name:hover {
 .theme-dark .player-tag {
   background: #1f2a3a;
   color: #dbe7f7;
+}
+
+.theme-dark .notable-tag.rank {
+  background: #3b2a0b;
+  color: #fbbf24;
+}
+
+.theme-dark .notable-tag.scoring {
+  background: #102f45;
+  color: #7dd3fc;
+}
+
+.theme-dark .notable-tag.private {
+  background: #263244;
+  color: #cbd5e1;
 }
 
 .theme-dark .stat-cell {

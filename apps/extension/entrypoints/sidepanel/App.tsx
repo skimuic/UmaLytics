@@ -25,6 +25,12 @@ const TEAM_SLOT_COUNT = 5;
 const SIDE_PANEL_THEME_STORAGE_KEY = 'sidePanelTheme';
 
 type SidePanelTheme = 'dark' | 'light';
+type NotableBadgeTone = 'rank' | 'scoring' | 'private';
+
+interface NotableBadge {
+  label: string;
+  tone: NotableBadgeTone;
+}
 
 export default function App() {
   const [roster, setRoster] = useState<PrematchRoster | undefined>();
@@ -245,9 +251,10 @@ function PlayerRow({
   const profileUrl = profile?.profileUrl ?? player.profileUrl;
   const note = getPlayerNote(profile, discordId);
   const statsMessage = getStatsMessage(profile, isProfileLoading, discordId);
+  const notableBadges = getNotableBadges(profile);
 
   return (
-    <li className={isExpanded ? 'player-row expanded' : 'player-row'}>
+    <li className={getPlayerRowClassName(isExpanded, notableBadges)}>
       <div className="player-main">
         {profileUrl === undefined ? (
           <span className="player-name-row">
@@ -284,6 +291,11 @@ function PlayerRow({
           </span>
         ))}
         {profile?.supporter === true ? <span className="player-tag">Supporter</span> : null}
+        {notableBadges.map((badge) => (
+          <span key={badge.label} className={`player-tag notable-tag ${badge.tone}`}>
+            {badge.label}
+          </span>
+        ))}
       </div>
       <div className="scouting-grid" aria-label={`${player.displayName} scouting summary`}>
         <StatCell label="W-L" value={formatRecord(profile)} />
@@ -563,6 +575,68 @@ function getPlayerTags(player: PrematchPlayer): string[] {
   }
 
   return tags;
+}
+
+function getNotableBadges(profile: PlayerProfileSummary | undefined): NotableBadge[] {
+  if (profile === undefined) {
+    return [];
+  }
+
+  if (profile.statsPrivate === true) {
+    return [
+      {
+        label: 'Private',
+        tone: 'private'
+      }
+    ];
+  }
+
+  const badges: NotableBadge[] = [];
+
+  if (profile.rank !== undefined && profile.rank !== null) {
+    if (profile.rank <= 10) {
+      badges.push({
+        label: 'Top 10',
+        tone: 'rank'
+      });
+    } else if (profile.rank <= 50) {
+      badges.push({
+        label: 'Top 50',
+        tone: 'rank'
+      });
+    }
+  }
+
+  if (
+    profile.pointsPerGame !== undefined &&
+    profile.pointsPerGame !== null &&
+    profile.pointsPerGame >= 6
+  ) {
+    badges.push({
+      label: 'High scoring',
+      tone: 'scoring'
+    });
+  }
+
+  return badges;
+}
+
+function getPlayerRowClassName(isExpanded: boolean, notableBadges: NotableBadge[]): string {
+  const classes = ['player-row'];
+
+  if (isExpanded) {
+    classes.push('expanded');
+  }
+
+  if (notableBadges.some((badge) => badge.tone === 'rank')) {
+    classes.push('rank-highlight');
+  } else if (notableBadges.some((badge) => badge.tone === 'scoring')) {
+    classes.push('scoring-highlight');
+  } else if (notableBadges.some((badge) => badge.tone === 'private')) {
+    classes.push('private-highlight');
+  }
+
+  return classes.join(' ');
 }
 
 function isPrematchRoster(value: unknown): value is PrematchRoster {
