@@ -189,13 +189,26 @@ async function fetchUmaLabels(): Promise<Map<string, string>> {
 
 async function fetchCardsAssetUrl(): Promise<URL> {
   const html = await fetchText(new URL('/', PROFILE_ORIGIN));
-  const match = /["'](\/assets\/cards-[^"']+\.js)["']/.exec(html);
+  const directCardsMatch = /["'](\/assets\/cards-[^"']+\.js)["']/.exec(html);
 
-  if (match?.[1] === undefined) {
+  if (directCardsMatch?.[1] !== undefined) {
+    return new URL(directCardsMatch[1], PROFILE_ORIGIN);
+  }
+
+  const indexMatch = /<script[^>]+src=["'](\/assets\/index-[^"']+\.js)["'][^>]*>/i.exec(html);
+
+  if (indexMatch?.[1] === undefined) {
+    throw new Error('Unable to find Uma Drafter index asset.');
+  }
+
+  const indexScript = await fetchText(new URL(indexMatch[1], PROFILE_ORIGIN));
+  const indirectCardsMatch = /["'](?:\.\/)?(assets\/cards-[^"']+\.js)["']/.exec(indexScript);
+
+  if (indirectCardsMatch?.[1] === undefined) {
     throw new Error('Unable to find Uma card labels asset.');
   }
 
-  return new URL(match[1], PROFILE_ORIGIN);
+  return new URL(`/${indirectCardsMatch[1]}`, PROFILE_ORIGIN);
 }
 
 async function fetchText(url: URL): Promise<string> {

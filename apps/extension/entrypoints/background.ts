@@ -109,7 +109,21 @@ function getFreshProfiles(
       .filter((entry): entry is readonly [string, PlayerProfileSummary] => {
         const profile = entry[1];
 
-        return profile !== undefined && now - profile.fetchedAt < PROFILE_CACHE_TTL_MS;
+        return (
+          profile !== undefined &&
+          now - profile.fetchedAt < PROFILE_CACHE_TTL_MS &&
+          hasResolvedTopUmaLabels(profile)
+        );
       })
   );
+}
+
+function hasResolvedTopUmaLabels(profile: PlayerProfileSummary): boolean {
+  const topUmas = profile.topUmas;
+
+  if (topUmas === undefined || topUmas.length === 0) {
+    return true;
+  }
+
+  return topUmas.every((uma) => uma.name !== uma.umaId);
 }

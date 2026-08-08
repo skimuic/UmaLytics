@@ -185,7 +185,7 @@ function PlayerRow({
                   {uma.name}
                 </span>
                 <span className="uma-meta">
-                  {uma.matches} GP · {formatPercent(uma.winRate)} · {formatDecimal(uma.pointsPerGame)} PPG
+                  {uma.matches} GP - {formatPercent(uma.winRate)} - {formatDecimal(uma.pointsPerGame)} PPG
                 </span>
               </li>
             ))}
