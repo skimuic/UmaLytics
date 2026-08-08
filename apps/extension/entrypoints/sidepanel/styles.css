@@ -43,7 +43,7 @@ body {
 
 .app-header .profile-freshness {
   color: #7c8aa0;
-  font-size: 11px;
+  font-size: 12px;
   margin-top: 2px;
 }
 
@@ -78,7 +78,7 @@ body {
   border-radius: 999px;
   color: #334155;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   line-height: 1;
   min-width: 52px;
@@ -145,7 +145,7 @@ body {
 .player-list {
   display: grid;
   gap: 6px;
-  grid-auto-rows: minmax(218px, auto);
+  grid-auto-rows: minmax(238px, auto);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -157,7 +157,7 @@ body {
   border-radius: 8px;
   display: grid;
   gap: 5px;
-  height: 218px;
+  height: 238px;
   overflow: hidden;
   padding: 9px 10px;
 }
@@ -191,7 +191,7 @@ body {
   background: transparent;
   border: 0;
   color: #0f172a;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.25;
   overflow-wrap: anywhere;
@@ -223,7 +223,7 @@ a.player-name:hover {
   border-radius: 999px;
   color: #475569;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   line-height: 1;
   padding: 4px 7px;
@@ -235,7 +235,7 @@ a.player-name:hover {
   border: 1px solid #d9e0ea;
   border-radius: 999px;
   color: #475569;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   line-height: 1;
   padding: 4px 6px;
@@ -249,13 +249,13 @@ a.player-name:hover {
 
 .player-id {
   color: #64748b;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.2;
 }
 
 .player-title {
   color: #2563eb;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -265,7 +265,7 @@ a.player-name:hover {
   color: #334155;
   display: flex;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: 13px;
   gap: 5px;
   line-height: 1.2;
   min-height: 24px;
@@ -275,7 +275,7 @@ a.player-name:hover {
   background: #eef2f7;
   border-radius: 999px;
   color: #334155;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   padding: 3px 6px;
 }
@@ -316,7 +316,7 @@ a.player-name:hover {
 
 .stat-cell span {
   color: #64748b;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
@@ -325,14 +325,14 @@ a.player-name:hover {
 
 .stat-cell strong {
   color: #17202a;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
 .player-note {
   color: #b45309;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.3;
   min-height: 14px;
   margin: 0;
@@ -374,7 +374,7 @@ a.player-name:hover {
 
 .top-umas p {
   color: #64748b;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
@@ -388,7 +388,7 @@ a.player-name:hover {
 
 .section-message {
   color: #64748b;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.35;
 }
 
@@ -398,7 +398,7 @@ a.player-name:hover {
   border-radius: 6px;
   color: #64748b;
   display: flex;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1.25;
   margin-top: 2px;
@@ -438,7 +438,7 @@ a.player-name:hover {
 
 .scouting-report p {
   color: #64748b;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
@@ -465,7 +465,7 @@ a.player-name:hover {
 
 .report-metric span {
   color: #64748b;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   line-height: 1;
   text-transform: uppercase;
@@ -473,7 +473,7 @@ a.player-name:hover {
 
 .report-metric strong {
   color: #17202a;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.2;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -481,7 +481,7 @@ a.player-name:hover {
 
 .report-metric small {
   color: #64748b;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.2;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -505,7 +505,7 @@ a.player-name:hover {
 
 .uma-name {
   color: #17202a;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.2;
   overflow: hidden;
@@ -515,7 +515,7 @@ a.player-name:hover {
 
 .uma-meta {
   color: #475569;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.2;
   white-space: nowrap;
 }
