@@ -5,9 +5,7 @@ const TEAM_IDS = ['team1', 'team2'] as const satisfies readonly TeamId[];
 const PLAYER_ROLES = new Set(['Player', 'Captain']);
 
 export function extractPrematchRosterFromRoomDom(document: Document): PrematchRoster | null {
-  const roomCode = normalizeText(
-    document.querySelector<HTMLButtonElement>('button[title="Copy room code"]')?.textContent
-  );
+  const roomCode = extractRoomCodeFromRoomDom(document);
 
   if (roomCode === undefined) {
     return null;
@@ -26,6 +24,12 @@ export function extractPrematchRosterFromRoomDom(document: Document): PrematchRo
     players,
     teams: Object.fromEntries(teams.map((team) => [team.id, team])) as Record<TeamId, PrematchTeam>
   };
+}
+
+export function extractRoomCodeFromRoomDom(document: Document): MatchCode | undefined {
+  return normalizeText(
+    document.querySelector<HTMLButtonElement>('button[title="Copy room code"]')?.textContent
+  ) as MatchCode | undefined;
 }
 
 function findTeamSections(document: Document): Array<{ id: TeamId; name?: string; element: HTMLElement }> {

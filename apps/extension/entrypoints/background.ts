@@ -13,9 +13,17 @@ import {
 } from '../utils/profileConstants';
 import { getLatestPrematchRoster, setLatestPrematchRoster } from '../utils/rosterStorage';
 
+const SCOUT_POPOUT_PATH = '/scout.html';
+const SCOUT_POPOUT_WIDTH = 540;
+const SCOUT_POPOUT_HEIGHT = 900;
+
 let enrichmentRunId = 0;
 
 export default defineBackground(() => {
+  browser.action?.onClicked.addListener(() => {
+    void openScoutWindow();
+  });
+
   void getLatestPrematchRoster().then((roster) => {
     if (roster !== undefined && roster.players.length > 0) {
       void enrichRosterProfiles(roster);
@@ -38,6 +46,16 @@ export default defineBackground(() => {
     return undefined;
   });
 });
+
+async function openScoutWindow(): Promise<void> {
+  await browser.windows.create({
+    url: browser.runtime.getURL(SCOUT_POPOUT_PATH),
+    type: 'popup',
+    width: SCOUT_POPOUT_WIDTH,
+    height: SCOUT_POPOUT_HEIGHT,
+    focused: true
+  });
+}
 
 async function handlePrematchRosterDetected(roster: PrematchRoster): Promise<void> {
   console.log(`[UmaLytics] Roster detected: ${roster.players.length} players`);
@@ -150,16 +168,24 @@ function getFreshProfiles(
         return (
           profile !== undefined &&
           now - profile.fetchedAt < PROFILE_CACHE_TTL_MS &&
-          hasResolvedTopUmaLabels(profile) &&
+          hasCurrentStatsShape(profile) &&
+          hasResolvedProfileStatLabels(profile) &&
           profile.bestUmaScoreVersion === BEST_UMA_SCORE_VERSION
         );
       })
   );
 }
 
-function hasResolvedTopUmaLabels(profile: PlayerProfileSummary): boolean {
-  const topUmas = profile.topUmas;
+function hasCurrentStatsShape(profile: PlayerProfileSummary): boolean {
+  return profile.currentSeasonStats !== undefined && profile.allTimeStats !== undefined;
+}
 
+function hasResolvedProfileStatLabels(profile: PlayerProfileSummary): boolean {
+  return [profile.topUmas, profile.currentSeasonStats?.topUmas, profile.allTimeStats?.topUmas]
+    .every((topUmas) => hasResolvedTopUmaLabels(topUmas));
+}
+
+function hasResolvedTopUmaLabels(topUmas: PlayerProfileSummary['topUmas']): boolean {
   if (topUmas === undefined || topUmas.length === 0) {
     return true;
   }

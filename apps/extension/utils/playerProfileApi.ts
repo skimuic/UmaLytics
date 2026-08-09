@@ -1,10 +1,14 @@
-import type { PlayerProfileSummary, PlayerTopUmaSummary, PrematchPlayer } from '@umalytics/shared';
-import { BEST_UMA_SCORE_VERSION } from './profileConstants';
+import type {
+  PlayerProfileStatsSummary,
+  PlayerProfileSummary,
+  PlayerTopUmaSummary,
+  PrematchPlayer
+} from '@umalytics/shared';
+import { BEST_UMA_MIN_MATCHES, BEST_UMA_SCORE_VERSION } from './profileConstants';
 
 const API_ORIGIN = 'https://drafter-api.uma.guide';
 const PROFILE_ORIGIN = 'https://drafter.uma.guide';
 const UMA_LABEL_CACHE_TTL_MS = 60 * 60 * 1000;
-const BEST_UMA_MIN_MATCHES = 4;
 const API_RATE_LIMIT_BACKOFF_MS = 30 * 1000;
 const API_SERVER_ERROR_BACKOFF_MS = 10 * 1000;
 
@@ -14,7 +18,6 @@ interface ApiPlayerProfile {
   displayName?: string;
   discordUsername?: string;
   title?: string | null;
-  supporter?: boolean;
 }
 
 interface ApiPlayerStats {
@@ -57,6 +60,7 @@ interface ApiLeaderboardEntry {
 
 interface LeaderboardLookup {
   ranksByDiscordId: Map<string, ApiLeaderboardEntry & { rank: number }>;
+  activeSeasonId?: string;
 }
 
 interface UmaCard {
@@ -116,6 +120,9 @@ function buildUnavailablePlayerSummary(
     topUmas: [],
     bestUmas: [],
     bestUmaScoreVersion: BEST_UMA_SCORE_VERSION,
+    statsScope: 'currentSeason',
+    currentSeasonStats: buildEmptyStatsSummary(),
+    allTimeStats: buildEmptyStatsSummary(),
     statsPrivate: false,
     fetchedAt: Date.now(),
     profileUrl: `${PROFILE_ORIGIN}/players/${encodeURIComponent(player.discordId)}`,
@@ -131,7 +138,8 @@ async function fetchPlayerProfileSummary(
   const profileUrl = `${PROFILE_ORIGIN}/players/${encodeURIComponent(player.discordId)}`;
   const leaderboardEntry = leaderboard.ranksByDiscordId.get(player.discordId);
   let profile: ApiPlayerProfile | undefined;
-  let stats: ApiPlayerStats | undefined;
+  let allTimeStats: ApiPlayerStats | undefined;
+  let currentSeasonStats: ApiPlayerStats | undefined;
   let statsPrivate = false;
   let error: string | undefined;
 
@@ -144,7 +152,7 @@ async function fetchPlayerProfileSummary(
   }
 
   try {
-    stats = await fetchJson<ApiPlayerStats>(
+    allTimeStats = await fetchJson<ApiPlayerStats>(
       `/api/stats/players/${encodeURIComponent(player.discordId)}/stats?mode=ranked`
     );
   } catch (caught) {
@@ -155,18 +163,34 @@ async function fetchPlayerProfileSummary(
     }
   }
 
-  const fallbackRecord = getRecordFromUmaEntries(stats?.umaEntries);
+  if (leaderboard.activeSeasonId !== undefined) {
+    try {
+      currentSeasonStats = await fetchJson<ApiPlayerStats>(
+        `/api/stats/players/${encodeURIComponent(player.discordId)}/stats?mode=ranked&season=${encodeURIComponent(leaderboard.activeSeasonId)}`
+      );
+    } catch (caught) {
+      if (caught instanceof ApiRequestError && caught.status === 403) {
+        statsPrivate = true;
+      } else {
+        console.warn('[UmaLytics] Unable to load current season stats:', caught);
+      }
+    }
+  }
+
+  const allTimeStatsSummary = buildStatsSummary(allTimeStats, umaLabels);
+  const currentSeasonStatsSummary = currentSeasonStats === undefined
+    ? allTimeStatsSummary
+    : buildStatsSummary(currentSeasonStats, umaLabels);
+  const displayedStats = currentSeasonStatsSummary;
+  const fallbackRecord = getRecordFromUmaEntries(currentSeasonStats?.umaEntries ?? allTimeStats?.umaEntries);
   const wins = leaderboardEntry?.wins ?? fallbackRecord.wins ?? null;
   const losses = leaderboardEntry?.losses ?? fallbackRecord.losses ?? null;
-  const matches = stats?.summary?.matchesIncluded ?? addNullable(wins, losses);
-  const points = stats?.summary?.totalPointsScored;
 
   return {
     discordId: player.discordId,
     displayName: profile?.displayName ?? leaderboardEntry?.displayName ?? player.displayName,
     discordUsername: profile?.discordUsername,
     title: profile?.title ?? null,
-    supporter: profile?.supporter,
     rank: leaderboardEntry?.rank ?? null,
     rating: leaderboardEntry?.rating ?? player.displayRatingSnapshot ?? player.ratingSnapshot ?? null,
     ratingDeviation: leaderboardEntry?.rd ?? player.displayRdSnapshot ?? player.rdSnapshot ?? null,
@@ -174,17 +198,19 @@ async function fetchPlayerProfileSummary(
       leaderboardEntry?.rating !== undefined && leaderboardEntry.rd !== undefined
         ? Math.round(leaderboardEntry.rating - leaderboardEntry.rd)
         : null,
+    ...displayedStats,
     wins,
     losses,
-    winRate: wins !== null && losses !== null && wins + losses > 0 ? wins / (wins + losses) : null,
-    matches,
-    points: points ?? null,
-    pointsPerGame: points !== undefined && matches !== null && matches > 0 ? points / matches : null,
-    podiums: stats?.summary?.totalPodiumPlacements ?? null,
-    mvpMatches: stats?.summary?.totalMvpMatches ?? null,
-    topUmas: getTopPlayedUmas(stats?.umaEntries, umaLabels),
-    bestUmas: getBestPerformingUmas(stats?.umaEntries, umaLabels),
-    bestUmaScoreVersion: BEST_UMA_SCORE_VERSION,
+    winRate: wins !== null && losses !== null && wins + losses > 0 ? wins / (wins + losses) : displayedStats.winRate,
+    statsScope: 'currentSeason',
+    currentSeasonStats: {
+      ...currentSeasonStatsSummary,
+      wins,
+      losses,
+      winRate: wins !== null && losses !== null && wins + losses > 0 ? wins / (wins + losses) : currentSeasonStatsSummary.winRate
+    },
+    allTimeStats: allTimeStatsSummary,
+    activeSeasonId: leaderboard.activeSeasonId,
     statsPrivate,
     fetchedAt: Date.now(),
     profileUrl,
@@ -298,6 +324,7 @@ async function fetchActiveLeaderboard(): Promise<LeaderboardLookup> {
   const entries = leaderboard.entries ?? [];
 
   return {
+    activeSeasonId: activeSeason.id,
     ranksByDiscordId: new Map(
       entries
         .map((entry, index) =>
@@ -307,6 +334,51 @@ async function fetchActiveLeaderboard(): Promise<LeaderboardLookup> {
           entry !== null
         )
     )
+  };
+}
+
+function buildStatsSummary(
+  stats: ApiPlayerStats | undefined,
+  umaLabels: Map<string, string>
+): PlayerProfileStatsSummary {
+  if (stats === undefined) {
+    return buildEmptyStatsSummary();
+  }
+
+  const record = getRecordFromUmaEntries(stats.umaEntries);
+  const wins = record.wins;
+  const losses = record.losses;
+  const matches = stats.summary?.matchesIncluded ?? addNullable(wins, losses);
+  const points = stats.summary?.totalPointsScored;
+
+  return {
+    wins,
+    losses,
+    winRate: wins !== null && losses !== null && wins + losses > 0 ? wins / (wins + losses) : null,
+    matches,
+    points: points ?? null,
+    pointsPerGame: points !== undefined && matches !== null && matches > 0 ? points / matches : null,
+    podiums: stats.summary?.totalPodiumPlacements ?? null,
+    mvpMatches: stats.summary?.totalMvpMatches ?? null,
+    topUmas: getTopPlayedUmas(stats.umaEntries, umaLabels),
+    bestUmas: getBestPerformingUmas(stats.umaEntries, umaLabels),
+    bestUmaScoreVersion: BEST_UMA_SCORE_VERSION
+  };
+}
+
+function buildEmptyStatsSummary(): PlayerProfileStatsSummary {
+  return {
+    wins: null,
+    losses: null,
+    winRate: null,
+    matches: null,
+    points: null,
+    pointsPerGame: null,
+    podiums: null,
+    mvpMatches: null,
+    topUmas: [],
+    bestUmas: [],
+    bestUmaScoreVersion: BEST_UMA_SCORE_VERSION
   };
 }
 

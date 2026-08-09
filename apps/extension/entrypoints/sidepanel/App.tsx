@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
 import type {
+  PlayerStatsScope,
   PlayerProfileSummary,
   PlayerTopUmaSummary,
   PrematchPlayer,
@@ -18,28 +19,40 @@ import {
   LATEST_PREMATCH_ROSTER_STORAGE_KEY
 } from '../../utils/rosterStorage';
 import { sendProfileRefreshRequest } from '../../utils/messaging';
-import { MANUAL_PROFILE_REFRESH_COOLDOWN_MS } from '../../utils/profileConstants';
+import {
+  BEST_UMA_MIN_MATCHES,
+  MANUAL_PROFILE_REFRESH_COOLDOWN_MS
+} from '../../utils/profileConstants';
 
 const TEAM_IDS = ['team1', 'team2'] as const satisfies readonly TeamId[];
 const TEAM_SLOT_COUNT = 5;
 const SIDE_PANEL_THEME_STORAGE_KEY = 'sidePanelTheme';
+const STATS_SCOPE_STORAGE_KEY = 'statsScope';
 const SCOUT_POPOUT_PATH = '/scout.html';
 const SCOUT_POPOUT_WIDTH = 540;
 const SCOUT_POPOUT_HEIGHT = 900;
 
 type SidePanelTheme = 'dark' | 'light';
 type ScoutSurface = 'sidepanel' | 'popout';
-type NotableBadgeTone = 'rank' | 'scoring' | 'private';
+type NotableBadgeTone = 'rank' | 'scoring' | 'sample' | 'private';
+type UmaBadgeTone = 'scoring' | 'sample' | 'private';
+type SampleConfidence = 'small' | 'steady' | 'proven';
 
 interface NotableBadge {
   label: string;
   tone: NotableBadgeTone;
 }
 
+interface UmaBadge {
+  label: string;
+  tone: UmaBadgeTone;
+}
+
 export default function App({ surface = 'sidepanel' }: { surface?: ScoutSurface }) {
   const [roster, setRoster] = useState<PrematchRoster | undefined>();
   const [profileSnapshot, setProfileSnapshot] = useState<PlayerProfileSummariesSnapshot | undefined>();
   const [theme, setTheme] = useState<SidePanelTheme>('dark');
+  const [statsScope, setStatsScope] = useState<PlayerStatsScope>('currentSeason');
   const [expandedPlayerKeys, setExpandedPlayerKeys] = useState<string[]>([]);
   const [now, setNow] = useState(Date.now());
 
@@ -47,6 +60,7 @@ export default function App({ surface = 'sidepanel' }: { surface?: ScoutSurface 
     void getLatestPrematchRoster().then(setRoster);
     void getPlayerProfileSummaries().then(setProfileSnapshot);
     void getStoredTheme().then(setTheme);
+    void getStoredStatsScope().then(setStatsScope);
 
     const handleStorageChange = (
       changes: Record<string, Browser.storage.StorageChange>,
@@ -96,11 +110,17 @@ export default function App({ surface = 'sidepanel' }: { surface?: ScoutSurface 
   const refreshCooldownMs = getRefreshCooldownMs(profileSnapshot?.updatedAt, now);
   const canRefresh = hasRoster && loadingProfiles === 0 && refreshCooldownMs === 0;
   const profileStatusLabel = getProfileSnapshotStatus(profileSnapshot, loadingProfiles, now);
+  const statsScopeLabel = getStatsScopeDescription(statsScope);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     void browser.storage.local.set({ [SIDE_PANEL_THEME_STORAGE_KEY]: nextTheme });
+  };
+
+  const selectStatsScope = (nextStatsScope: PlayerStatsScope) => {
+    setStatsScope(nextStatsScope);
+    void browser.storage.local.set({ [STATS_SCOPE_STORAGE_KEY]: nextStatsScope });
   };
 
   const toggleExpandedPlayer = (playerKey: string) => {
@@ -135,11 +155,34 @@ export default function App({ surface = 'sidepanel' }: { surface?: ScoutSurface 
         <div>
           <h1>UmaLytics</h1>
           <p>{roster?.matchCode === undefined ? 'Lobby scouting' : `Match ${roster.matchCode}`}</p>
+          <p className="stats-scope-description">{statsScopeLabel}</p>
           {profileStatusLabel === undefined ? null : (
             <p className="profile-freshness">{profileStatusLabel}</p>
           )}
         </div>
         <div className="header-actions">
+          <div className="stats-scope-toggle" aria-label="Stats time window">
+            <button
+              type="button"
+              className={statsScope === 'currentSeason' ? 'active' : ''}
+              title="Show current season records, scoring, and Uma stats."
+              onClick={() => {
+                selectStatsScope('currentSeason');
+              }}
+            >
+              Season
+            </button>
+            <button
+              type="button"
+              className={statsScope === 'allTime' ? 'active' : ''}
+              title="Show all-time ranked records, scoring, and Uma stats. Rank still uses the active season leaderboard."
+              onClick={() => {
+                selectStatsScope('allTime');
+              }}
+            >
+              All-time
+            </button>
+          </div>
           <div className="header-control-row">
             <button
               type="button"
@@ -161,7 +204,7 @@ export default function App({ surface = 'sidepanel' }: { surface?: ScoutSurface 
                   ? 'Refreshing'
                   : refreshCooldownMs > 0
                     ? `Wait ${Math.ceil(refreshCooldownMs / 1000)}s`
-                    : 'Refresh'}
+                    : 'Refresh data'}
               </button>
             ) : null}
             {surface === 'sidepanel' ? (
@@ -189,6 +232,7 @@ export default function App({ surface = 'sidepanel' }: { surface?: ScoutSurface 
               team={team}
               profiles={profileSnapshot?.profiles ?? {}}
               loadingDiscordIds={profileSnapshot?.loadingDiscordIds ?? []}
+              statsScope={statsScope}
               expandedPlayerKeys={expandedPlayerKeys}
               now={now}
               onTogglePlayer={toggleExpandedPlayer}
@@ -204,6 +248,7 @@ function TeamSection({
   team,
   profiles,
   loadingDiscordIds,
+  statsScope,
   expandedPlayerKeys,
   now,
   onTogglePlayer
@@ -211,6 +256,7 @@ function TeamSection({
   team: PrematchTeam;
   profiles: Record<string, PlayerProfileSummary>;
   loadingDiscordIds: string[];
+  statsScope: PlayerStatsScope;
   expandedPlayerKeys: string[];
   now: number;
   onTogglePlayer: (playerKey: string) => void;
@@ -236,6 +282,7 @@ function TeamSection({
               player={player}
               profile={profiles[player.discordId]}
               isProfileLoading={loadingDiscordIds.includes(player.discordId)}
+              statsScope={statsScope}
               isExpanded={expandedPlayerKeys.includes(getPlayerKey(player))}
               now={now}
               onToggleExpanded={() => {
@@ -253,6 +300,7 @@ function PlayerRow({
   player,
   profile,
   isProfileLoading,
+  statsScope,
   isExpanded,
   now,
   onToggleExpanded
@@ -260,24 +308,31 @@ function PlayerRow({
   player: PrematchPlayer;
   profile?: PlayerProfileSummary;
   isProfileLoading: boolean;
+  statsScope: PlayerStatsScope;
   isExpanded: boolean;
   now: number;
   onToggleExpanded: () => void;
 }) {
+  const displayedProfile = getDisplayedProfileStats(profile, statsScope);
   const rating = profile?.conservativeRating ?? profile?.rating ?? player.displayRatingSnapshot ?? player.ratingSnapshot;
-  const tags = getPlayerTags(player);
   const discordId = getLookupDiscordId(player);
   const profileUrl = profile?.profileUrl ?? player.profileUrl;
   const note = getPlayerNote(profile, discordId);
   const statsMessage = getStatsMessage(profile, isProfileLoading, discordId);
-  const notableBadges = getNotableBadges(profile);
+  const notableBadges = getNotableBadges(displayedProfile);
+  const isInParty = player.partyId !== undefined && player.partyId !== null;
+  const isCaptain = player.isCaptain === true || player.role === 'captain';
 
   return (
-    <li className={getPlayerRowClassName(isExpanded, notableBadges)}>
+    <li className={getPlayerRowClassName(isExpanded, notableBadges, isCaptain)}>
       <div className="player-main">
         {profileUrl === undefined ? (
           <span className="player-name-row">
-            <span className="player-name">{profile?.displayName ?? player.displayName}</span>
+            <span className="player-identity">
+              <span className="player-name">{profile?.displayName ?? player.displayName}</span>
+              {isCaptain ? <CaptainCrown /> : null}
+              {isInParty ? <span className="identity-tag">Party</span> : null}
+            </span>
             {isProfileLoading && discordId !== undefined ? (
               <span className="player-inline-status">Refreshing</span>
             ) : null}
@@ -287,9 +342,13 @@ function PlayerRow({
           </span>
         ) : (
           <span className="player-name-row">
-            <a className="player-name" href={profileUrl} target="_blank" rel="noreferrer">
-              {profile?.displayName ?? player.displayName}
-            </a>
+            <span className="player-identity">
+              <a className="player-name" href={profileUrl} target="_blank" rel="noreferrer">
+                {profile?.displayName ?? player.displayName}
+              </a>
+              {isCaptain ? <CaptainCrown /> : null}
+              {isInParty ? <span className="identity-tag">Party</span> : null}
+            </span>
             {isProfileLoading && discordId !== undefined ? (
               <span className="player-inline-status">Refreshing</span>
             ) : null}
@@ -304,12 +363,6 @@ function PlayerRow({
       <div className="player-meta">
         <span>{formatRank(profile, isProfileLoading && discordId !== undefined)}</span>
         <span>{rating === undefined || rating === null ? 'Rating unknown' : `${rating} rating`}</span>
-        {tags.map((tag) => (
-          <span key={tag} className="player-tag">
-            {tag}
-          </span>
-        ))}
-        {profile?.supporter === true ? <span className="player-tag">Supporter</span> : null}
         {notableBadges.map((badge) => (
           <span key={badge.label} className={`player-tag notable-tag ${badge.tone}`}>
             {badge.label}
@@ -317,14 +370,14 @@ function PlayerRow({
         ))}
       </div>
       <div className="scouting-grid" aria-label={`${player.displayName} scouting summary`}>
-        <StatCell label="W-L" value={formatRecord(profile)} />
-        <StatCell label="Win" value={formatPercent(profile?.winRate)} />
-        <StatCell label="Pts/GP" value={formatDecimal(profile?.pointsPerGame)} />
-        <StatCell label="Podiums" value={formatNumber(profile?.podiums)} />
-        <StatCell label="MVP" value={formatNumber(profile?.mvpMatches)} />
+        <StatCell label="W-L" value={formatRecord(displayedProfile)} />
+        <StatCell label="Win" value={formatPercent(displayedProfile?.winRate)} />
+        <StatCell label="Pts/GP" value={formatDecimal(displayedProfile?.pointsPerGame)} />
+        <StatCell label="Podiums" value={formatNumber(displayedProfile?.podiums)} />
+        <StatCell label="MVP" value={formatNumber(displayedProfile?.mvpMatches)} />
       </div>
       <TopUmasList
-        topUmas={profile?.topUmas}
+        topUmas={displayedProfile?.topUmas}
         playerName={player.displayName}
         emptyMessage={statsMessage}
       />
@@ -336,9 +389,9 @@ function PlayerRow({
             isProfileLoading={isProfileLoading}
             now={now}
           />
-          <ScoutingReport profile={profile} emptyMessage={statsMessage} />
+          <ScoutingReport profile={displayedProfile} emptyMessage={statsMessage} />
           <BestUmasList
-            bestUmas={profile?.bestUmas}
+            bestUmas={displayedProfile?.bestUmas}
             playerName={player.displayName}
             emptyMessage={statsMessage}
           />
@@ -346,6 +399,16 @@ function PlayerRow({
       ) : null}
       <p className={note === undefined ? 'player-note empty' : 'player-note'}>{note ?? ' '}</p>
     </li>
+  );
+}
+
+function CaptainCrown() {
+  return (
+    <span className="captain-crown" title="Captain" aria-label="Captain">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M3.8 8.8 8.7 13.2 12 5.8l3.3 7.4 4.9-4.4-1.8 9.1H5.6L3.8 8.8Z" />
+      </svg>
+    </span>
   );
 }
 
@@ -428,6 +491,7 @@ function ScoutingReport({
 
   const comfortPick = profile.topUmas?.[0];
   const bestPick = profile.bestUmas?.[0];
+  const sampleConfidence = getSampleConfidence(profile.matches);
 
   return (
     <section className="scouting-report" aria-label="Player scouting report">
@@ -445,8 +509,8 @@ function ScoutingReport({
         />
         <ReportMetric
           label="Sample"
-          value={formatNumber(profile.matches)}
-          detail={formatRecordDetail(profile)}
+          value={formatSampleConfidence(sampleConfidence)}
+          detail={formatSampleDetail(profile)}
         />
         <ReportMetric
           label="Scoring"
@@ -535,7 +599,7 @@ function BestUmasList({
       <p>Best Performing</p>
       {shouldShowMessage ? (
         <span className="section-message">
-          {emptyMessage ?? 'No Umas meet the 4 game sample yet.'}
+          {emptyMessage ?? `No Umas meet the ${BEST_UMA_MIN_MATCHES} game sample yet.`}
         </span>
       ) : (
         <ol>
@@ -546,13 +610,36 @@ function BestUmasList({
                 <span className="uma-meta">-</span>
               </li>
             ) : (
-              <li key={uma.umaId}>
-                <span className="uma-name" title={uma.name}>
-                  {uma.name}
+              <li key={uma.umaId} className="best-uma-row">
+                <span className="best-uma-heading">
+                  <span className="uma-name" title={uma.name}>
+                    {uma.name}
+                  </span>
+                  <span className="best-uma-badges">
+                    {getUmaBadges(uma).map((badge) => (
+                      <span key={badge.label} className={`uma-badge ${badge.tone}`}>
+                        {badge.label}
+                      </span>
+                    ))}
+                  </span>
                 </span>
-                <span className="uma-meta">
-                  {formatNumber(uma.performanceScore)} score - {formatDecimal(uma.pointsPerGame)} PPG -{' '}
-                  {formatPercent(uma.winRate)} - {uma.matches} GP
+                <span className="best-uma-stats">
+                  <span>
+                    <small>Score</small>
+                    <strong>{formatNumber(uma.performanceScore)}</strong>
+                  </span>
+                  <span>
+                    <small>PPG</small>
+                    <strong>{formatDecimal(uma.pointsPerGame)}</strong>
+                  </span>
+                  <span>
+                    <small>WR</small>
+                    <strong>{formatPercent(uma.winRate)}</strong>
+                  </span>
+                  <span>
+                    <small>GP</small>
+                    <strong>{uma.matches}</strong>
+                  </span>
                 </span>
               </li>
             )
@@ -582,18 +669,25 @@ function getTeamGroups(roster: PrematchRoster | undefined): PrematchTeam[] {
   ];
 }
 
-function getPlayerTags(player: PrematchPlayer): string[] {
-  const tags: string[] = [];
-
-  if (player.isCaptain === true || player.role === 'captain') {
-    tags.push('Captain');
+function getDisplayedProfileStats(
+  profile: PlayerProfileSummary | undefined,
+  statsScope: PlayerStatsScope
+): PlayerProfileSummary | undefined {
+  if (profile === undefined) {
+    return undefined;
   }
 
-  if (player.partyId !== null) {
-    tags.push('Party');
+  const stats = statsScope === 'allTime' ? profile.allTimeStats : profile.currentSeasonStats;
+
+  if (stats === undefined) {
+    return profile;
   }
 
-  return tags;
+  return {
+    ...profile,
+    ...stats,
+    statsScope
+  };
 }
 
 function getNotableBadges(profile: PlayerProfileSummary | undefined): NotableBadge[] {
@@ -637,14 +731,36 @@ function getNotableBadges(profile: PlayerProfileSummary | undefined): NotableBad
     });
   }
 
+  if (
+    profile.matches !== undefined &&
+    profile.matches !== null &&
+    profile.matches >= 25 &&
+    profile.winRate !== undefined &&
+    profile.winRate !== null &&
+    profile.winRate >= 0.6
+  ) {
+    badges.push({
+      label: 'Reliable',
+      tone: 'sample'
+    });
+  }
+
   return badges;
 }
 
-function getPlayerRowClassName(isExpanded: boolean, notableBadges: NotableBadge[]): string {
+function getPlayerRowClassName(
+  isExpanded: boolean,
+  notableBadges: NotableBadge[],
+  isCaptain: boolean
+): string {
   const classes = ['player-row'];
 
   if (isExpanded) {
     classes.push('expanded');
+  }
+
+  if (isCaptain) {
+    classes.push('captain-player');
   }
 
   if (notableBadges.some((badge) => badge.tone === 'rank')) {
@@ -726,13 +842,20 @@ function formatBestUmaLine(uma: PlayerTopUmaSummary | undefined): string {
     return `${formatDecimal(uma.pointsPerGame)} PPG - ${uma.matches} GP`;
   }
 
-  return `${formatNumber(uma.performanceScore)} score - ${uma.matches} GP`;
+  return `${formatNumber(uma.performanceScore)} score - ${formatSampleConfidence(getSampleConfidence(uma.matches))}`;
 }
 
 function formatRecordDetail(profile: PlayerProfileSummary): string {
   const record = formatRecord(profile);
 
   return record === '-' ? 'Record unknown' : `${record} W-L`;
+}
+
+function formatSampleDetail(profile: PlayerProfileSummary): string {
+  const matches = formatNumber(profile.matches);
+  const record = formatRecordDetail(profile);
+
+  return matches === '-' ? record : `${matches} GP - ${record}`;
 }
 
 function formatScoringValue(pointsPerGame: number | null | undefined): string {
@@ -745,6 +868,62 @@ function formatWinRateDetail(winRate: number | null | undefined): string {
   const formattedWinRate = formatPercent(winRate);
 
   return formattedWinRate === '-' ? 'Win rate unknown' : `${formattedWinRate} win`;
+}
+
+function getSampleConfidence(matches: number | null | undefined): SampleConfidence {
+  if (matches === undefined || matches === null || matches < 10) {
+    return 'small';
+  }
+
+  if (matches < 25) {
+    return 'steady';
+  }
+
+  return 'proven';
+}
+
+function formatSampleConfidence(confidence: SampleConfidence): string {
+  switch (confidence) {
+    case 'proven':
+      return 'Proven';
+    case 'steady':
+      return 'Steady';
+    case 'small':
+      return 'Small';
+  }
+}
+
+function getUmaBadges(uma: PlayerTopUmaSummary): UmaBadge[] {
+  const badges: UmaBadge[] = [];
+  const confidence = getSampleConfidence(uma.matches);
+
+  if (uma.pointsPerGame !== null && uma.pointsPerGame >= 6.5) {
+    badges.push({
+      label: 'High scorer',
+      tone: 'scoring'
+    });
+  }
+
+  if (uma.winRate !== null && uma.winRate >= 0.65 && uma.matches >= 10) {
+    badges.push({
+      label: 'Reliable',
+      tone: 'sample'
+    });
+  }
+
+  if (confidence === 'small') {
+    badges.push({
+      label: 'Small sample',
+      tone: 'private'
+    });
+  } else if (confidence === 'proven') {
+    badges.push({
+      label: 'Proven',
+      tone: 'sample'
+    });
+  }
+
+  return badges.slice(0, 2);
 }
 
 function getRefreshCooldownMs(updatedAt: number | undefined, now: number): number {
@@ -769,6 +948,12 @@ function getProfileSnapshotStatus(
   }
 
   return `Profile data updated ${formatRelativeAge(snapshot.updatedAt, now)}`;
+}
+
+function getStatsScopeDescription(statsScope: PlayerStatsScope): string {
+  return statsScope === 'currentSeason'
+    ? 'Showing current season stats'
+    : 'Showing all-time stats - rank is current season';
 }
 
 function getProfileDataStatus(
@@ -892,4 +1077,13 @@ async function getStoredTheme(): Promise<SidePanelTheme> {
   const storedTheme = values[SIDE_PANEL_THEME_STORAGE_KEY];
 
   return storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'dark';
+}
+
+async function getStoredStatsScope(): Promise<PlayerStatsScope> {
+  const values = await browser.storage.local.get(STATS_SCOPE_STORAGE_KEY);
+  const storedStatsScope = values[STATS_SCOPE_STORAGE_KEY];
+
+  return storedStatsScope === 'allTime' || storedStatsScope === 'currentSeason'
+    ? storedStatsScope
+    : 'currentSeason';
 }
