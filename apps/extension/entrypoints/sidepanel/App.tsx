@@ -41,11 +41,13 @@ type SampleConfidence = 'small' | 'steady' | 'proven';
 interface NotableBadge {
   label: string;
   tone: NotableBadgeTone;
+  title: string;
 }
 
 interface UmaBadge {
   label: string;
   tone: UmaBadgeTone;
+  title: string;
 }
 
 export default function App({ surface = 'sidepanel' }: { surface?: ScoutSurface }) {
@@ -155,7 +157,9 @@ export default function App({ surface = 'sidepanel' }: { surface?: ScoutSurface 
         <div>
           <h1>UmaLytics</h1>
           <p>{roster?.matchCode === undefined ? 'Lobby scouting' : `Match ${roster.matchCode}`}</p>
-          <p className="stats-scope-description">{statsScopeLabel}</p>
+          <p className="stats-scope-description" title={getStatsScopeTooltip(statsScope)}>
+            {statsScopeLabel}
+          </p>
           {profileStatusLabel === undefined ? null : (
             <p className="profile-freshness">{profileStatusLabel}</p>
           )}
@@ -364,17 +368,21 @@ function PlayerRow({
         <span>{formatRank(profile, isProfileLoading && discordId !== undefined)}</span>
         <span>{rating === undefined || rating === null ? 'Rating unknown' : `${rating} rating`}</span>
         {notableBadges.map((badge) => (
-          <span key={badge.label} className={`player-tag notable-tag ${badge.tone}`}>
+          <span
+            key={badge.label}
+            className={`player-tag notable-tag ${badge.tone}`}
+            title={badge.title}
+          >
             {badge.label}
           </span>
         ))}
       </div>
       <div className="scouting-grid" aria-label={`${player.displayName} scouting summary`}>
-        <StatCell label="W-L" value={formatRecord(displayedProfile)} />
-        <StatCell label="Win" value={formatPercent(displayedProfile?.winRate)} />
-        <StatCell label="Pts/GP" value={formatDecimal(displayedProfile?.pointsPerGame)} />
-        <StatCell label="Podiums" value={formatNumber(displayedProfile?.podiums)} />
-        <StatCell label="MVP" value={formatNumber(displayedProfile?.mvpMatches)} />
+        <StatCell label="W-L" value={formatRecord(displayedProfile)} title="Ranked win-loss record for the selected stat scope." />
+        <StatCell label="Win" value={formatPercent(displayedProfile?.winRate)} title="Ranked win rate for the selected stat scope." />
+        <StatCell label="Pts/GP" value={formatDecimal(displayedProfile?.pointsPerGame)} title="Average ranked points per game for the selected stat scope." />
+        <StatCell label="Podiums" value={formatNumber(displayedProfile?.podiums)} title="Total ranked podium finishes for the selected stat scope." />
+        <StatCell label="MVP" value={formatNumber(displayedProfile?.mvpMatches)} title="Total ranked MVP games for the selected stat scope." />
       </div>
       <TopUmasList
         topUmas={displayedProfile?.topUmas}
@@ -424,11 +432,11 @@ function EmptyPlayerSlot({ slotNumber }: { slotNumber: number }) {
         <span>Open slot</span>
       </div>
       <div className="scouting-grid" aria-label={`Empty player slot ${slotNumber}`}>
-        <StatCell label="W-L" value="-" />
-        <StatCell label="Win" value="-" />
-        <StatCell label="Pts/GP" value="-" />
-        <StatCell label="Podiums" value="-" />
-        <StatCell label="MVP" value="-" />
+        <StatCell label="W-L" value="-" title="No player in this slot yet." />
+        <StatCell label="Win" value="-" title="No player in this slot yet." />
+        <StatCell label="Pts/GP" value="-" title="No player in this slot yet." />
+        <StatCell label="Podiums" value="-" title="No player in this slot yet." />
+        <StatCell label="MVP" value="-" title="No player in this slot yet." />
       </div>
       <TopUmasList playerName={`empty slot ${slotNumber}`} emptyMessage="Waiting for player." />
       <p className="player-note empty"> </p>
@@ -444,9 +452,9 @@ function getPlayerKey(player: PrematchPlayer): string {
   return `${player.discordId}:${player.userId}`;
 }
 
-function StatCell({ label, value }: { label: string; value: string }) {
+function StatCell({ label, value, title }: { label: string; value: string; title: string }) {
   return (
-    <span className="stat-cell">
+    <span className="stat-cell" title={title}>
       <span>{label}</span>
       <strong>{value}</strong>
     </span>
@@ -501,21 +509,25 @@ function ScoutingReport({
           label="Comfort"
           value={comfortPick?.name ?? '-'}
           detail={formatUmaLine(comfortPick)}
+          title="Most played Uma in ranked games for the selected stat scope."
         />
         <ReportMetric
           label="Best"
           value={bestPick?.name ?? '-'}
           detail={formatBestUmaLine(bestPick)}
+          title="Best result signal using scoring first, with win rate and sample size as context."
         />
         <ReportMetric
           label="Sample"
           value={formatSampleConfidence(sampleConfidence)}
           detail={formatSampleDetail(profile)}
+          title="How much ranked data this profile has in the selected stat scope."
         />
         <ReportMetric
           label="Scoring"
           value={formatScoringValue(profile.pointsPerGame)}
           detail={formatWinRateDetail(profile.winRate)}
+          title="Average ranked points per game. Higher scoring is usually more draft-relevant than win rate alone."
         />
       </div>
     </section>
@@ -525,14 +537,16 @@ function ScoutingReport({
 function ReportMetric({
   label,
   value,
-  detail
+  detail,
+  title
 }: {
   label: string;
   value: string;
   detail: string;
+  title: string;
 }) {
   return (
-    <div className="report-metric">
+    <div className="report-metric" title={title}>
       <span>{label}</span>
       <strong title={value}>{value}</strong>
       <small>{detail}</small>
@@ -553,7 +567,11 @@ function TopUmasList({
   const shouldShowMessage = topUmas === undefined || topUmas.length === 0;
 
   return (
-    <div className="top-umas" aria-label={`${playerName} most played Umas`}>
+    <div
+      className="top-umas"
+      aria-label={`${playerName} most played Umas`}
+      title="Most played ranked Umas for the selected stat scope."
+    >
       <p>Most Played</p>
       {shouldShowMessage ? (
         <span className="section-message">{emptyMessage ?? 'No ranked Uma data found.'}</span>
@@ -595,7 +613,11 @@ function BestUmasList({
   const shouldShowMessage = bestUmas === undefined || bestUmas.length === 0;
 
   return (
-    <div className="top-umas best-umas" aria-label={`${playerName} best performing Umas`}>
+    <div
+      className="top-umas best-umas"
+      aria-label={`${playerName} best performing Umas`}
+      title={`Best ranked Uma results with at least ${BEST_UMA_MIN_MATCHES} games. Score favors PPG, then win rate and sample size.`}
+    >
       <p>Best Performing</p>
       {shouldShowMessage ? (
         <span className="section-message">
@@ -617,7 +639,11 @@ function BestUmasList({
                   </span>
                   <span className="best-uma-badges">
                     {getUmaBadges(uma).map((badge) => (
-                      <span key={badge.label} className={`uma-badge ${badge.tone}`}>
+                      <span
+                        key={badge.label}
+                        className={`uma-badge ${badge.tone}`}
+                        title={badge.title}
+                      >
                         {badge.label}
                       </span>
                     ))}
@@ -699,7 +725,8 @@ function getNotableBadges(profile: PlayerProfileSummary | undefined): NotableBad
     return [
       {
         label: 'Private',
-        tone: 'private'
+        tone: 'private',
+        title: 'This player keeps ranked profile stats private.'
       }
     ];
   }
@@ -710,12 +737,14 @@ function getNotableBadges(profile: PlayerProfileSummary | undefined): NotableBad
     if (profile.rank <= 10) {
       badges.push({
         label: 'Top 10',
-        tone: 'rank'
+        tone: 'rank',
+        title: 'Current-season leaderboard rank is top 10.'
       });
     } else if (profile.rank <= 25) {
       badges.push({
         label: 'Top 25',
-        tone: 'rank'
+        tone: 'rank',
+        title: 'Current-season leaderboard rank is top 25.'
       });
     }
   }
@@ -727,7 +756,8 @@ function getNotableBadges(profile: PlayerProfileSummary | undefined): NotableBad
   ) {
     badges.push({
       label: 'High scoring',
-      tone: 'scoring'
+      tone: 'scoring',
+      title: 'Averages at least 6.0 points per ranked game in the selected stat scope.'
     });
   }
 
@@ -741,7 +771,8 @@ function getNotableBadges(profile: PlayerProfileSummary | undefined): NotableBad
   ) {
     badges.push({
       label: 'Reliable',
-      tone: 'sample'
+      tone: 'sample',
+      title: 'At least 25 ranked games with a 60% or higher win rate in the selected stat scope.'
     });
   }
 
@@ -900,26 +931,30 @@ function getUmaBadges(uma: PlayerTopUmaSummary): UmaBadge[] {
   if (uma.pointsPerGame !== null && uma.pointsPerGame >= 6.5) {
     badges.push({
       label: 'High scorer',
-      tone: 'scoring'
+      tone: 'scoring',
+      title: 'At least 6.5 points per ranked game on this Uma.'
     });
   }
 
   if (uma.winRate !== null && uma.winRate >= 0.65 && uma.matches >= 10) {
     badges.push({
       label: 'Reliable',
-      tone: 'sample'
+      tone: 'sample',
+      title: 'At least 10 ranked games and a 65% or higher win rate on this Uma.'
     });
   }
 
   if (confidence === 'small') {
     badges.push({
       label: 'Small sample',
-      tone: 'private'
+      tone: 'private',
+      title: 'Fewer than 10 ranked games on this Uma. Treat the result as a hint, not a conclusion.'
     });
   } else if (confidence === 'proven') {
     badges.push({
       label: 'Proven',
-      tone: 'sample'
+      tone: 'sample',
+      title: 'At least 25 ranked games on this Uma.'
     });
   }
 
@@ -954,6 +989,12 @@ function getStatsScopeDescription(statsScope: PlayerStatsScope): string {
   return statsScope === 'currentSeason'
     ? 'Showing current season stats'
     : 'Showing all-time stats - rank is current season';
+}
+
+function getStatsScopeTooltip(statsScope: PlayerStatsScope): string {
+  return statsScope === 'currentSeason'
+    ? 'Record, scoring, most played, and best performing are from the current season.'
+    : 'Record, scoring, most played, and best performing use all-time ranked data. Rank still uses the current season leaderboard.';
 }
 
 function getProfileDataStatus(
