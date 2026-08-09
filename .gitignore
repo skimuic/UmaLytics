@@ -2,6 +2,7 @@ node_modules/
 dist/
 .output/
 .wxt/
+releases/
 
 *.log
 *.tsbuildinfo
