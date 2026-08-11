@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import type { ScriptPublicPath } from 'wxt/utils/inject-script';
 import type { PlayerProfileSummary, PrematchRoster } from '@umalytics/shared';
 import { isUmaLyticsMessage } from '../utils/messaging';
 import { fetchPlayerProfileSummaries } from '../utils/playerProfileApi';
@@ -9,19 +10,41 @@ import {
 import {
   BEST_UMA_SCORE_VERSION,
   MANUAL_PROFILE_REFRESH_COOLDOWN_MS,
-  PROFILE_CACHE_TTL_MS
+  PROFILE_CACHE_TTL_MS,
+  RECENT_HISTORY_VERSION
 } from '../utils/profileConstants';
+import { setLatestDraftSnapshot } from '../utils/draftStorage';
 import { getLatestPrematchRoster, setLatestPrematchRoster } from '../utils/rosterStorage';
+import { isHashedUmaAssetUrl } from '../utils/umaPortraits';
 
 const SCOUT_POPOUT_PATH = '/scout.html';
-const SCOUT_POPOUT_WIDTH = 540;
-const SCOUT_POPOUT_HEIGHT = 900;
+const CONTENT_SCRIPT_PATH = '/content-scripts/content.js' as ScriptPublicPath;
+const DRAFTER_URL_PATTERN = 'https://drafter.uma.guide/*';
+const SCOUT_POPOUT_WIDTH = 1320;
+const SCOUT_POPOUT_HEIGHT = 1020;
 
 let enrichmentRunId = 0;
+let scoutWindowId: number | undefined;
 
 export default defineBackground(() => {
   browser.action?.onClicked.addListener(() => {
     void openScoutWindow();
+  });
+
+  browser.windows?.onRemoved.addListener((windowId) => {
+    if (windowId === scoutWindowId) {
+      scoutWindowId = undefined;
+    }
+  });
+
+  void reconnectOpenDrafterTabs();
+
+  browser.runtime.onInstalled.addListener(() => {
+    void reconnectOpenDrafterTabs();
+  });
+
+  browser.runtime.onStartup?.addListener(() => {
+    void reconnectOpenDrafterTabs();
   });
 
   void getLatestPrematchRoster().then((roster) => {
@@ -39,8 +62,16 @@ export default defineBackground(() => {
       return handlePrematchRosterDetected(message.roster);
     }
 
+    if (message.type === 'draft-snapshot-detected') {
+      return setLatestDraftSnapshot(message.snapshot);
+    }
+
     if (message.type === 'profile-refresh-requested') {
       return handleProfileRefreshRequested(message.roster);
+    }
+
+    if (message.type === 'lobby-reconnect-requested') {
+      return reconnectActiveDrafterTab();
     }
 
     return undefined;
@@ -48,13 +79,61 @@ export default defineBackground(() => {
 });
 
 async function openScoutWindow(): Promise<void> {
-  await browser.windows.create({
+  await reconnectActiveDrafterTab();
+
+  if (scoutWindowId !== undefined) {
+    try {
+      await browser.windows.update(scoutWindowId, {
+        focused: true,
+        width: SCOUT_POPOUT_WIDTH,
+        height: SCOUT_POPOUT_HEIGHT
+      });
+      return;
+    } catch {
+      scoutWindowId = undefined;
+    }
+  }
+
+  const scoutWindow = await browser.windows.create({
     url: browser.runtime.getURL(SCOUT_POPOUT_PATH),
     type: 'popup',
     width: SCOUT_POPOUT_WIDTH,
     height: SCOUT_POPOUT_HEIGHT,
     focused: true
   });
+
+  scoutWindowId = scoutWindow?.id;
+}
+
+async function reconnectOpenDrafterTabs(): Promise<void> {
+  const tabs = await browser.tabs.query({ url: DRAFTER_URL_PATTERN });
+  await Promise.all(tabs.map((tab) => injectContentScriptIntoTab(tab.id)));
+}
+
+async function reconnectActiveDrafterTab(): Promise<void> {
+  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+  const activeTab = tabs.find((tab) => tab.url?.startsWith('https://drafter.uma.guide/') === true);
+
+  if (activeTab === undefined) {
+    return;
+  }
+
+  await injectContentScriptIntoTab(activeTab.id);
+}
+
+async function injectContentScriptIntoTab(tabId: number | undefined): Promise<void> {
+  if (tabId === undefined) {
+    return;
+  }
+
+  try {
+    await browser.scripting.executeScript({
+      target: { tabId },
+      files: [CONTENT_SCRIPT_PATH]
+    });
+  } catch (caught) {
+    console.debug('[UmaLytics] Content script reconnect skipped:', caught);
+  }
 }
 
 async function handlePrematchRosterDetected(roster: PrematchRoster): Promise<void> {
@@ -170,27 +249,43 @@ function getFreshProfiles(
           now - profile.fetchedAt < PROFILE_CACHE_TTL_MS &&
           hasCurrentStatsShape(profile) &&
           hasResolvedProfileStatLabels(profile) &&
-          profile.bestUmaScoreVersion === BEST_UMA_SCORE_VERSION
+          profile.bestUmaScoreVersion === BEST_UMA_SCORE_VERSION &&
+          profile.recentHistoryVersion === RECENT_HISTORY_VERSION &&
+          profile.currentSeasonStats?.recentHistoryVersion === RECENT_HISTORY_VERSION &&
+          profile.allTimeStats?.recentHistoryVersion === RECENT_HISTORY_VERSION
         );
       })
   );
 }
 
 function hasCurrentStatsShape(profile: PlayerProfileSummary): boolean {
-  return profile.currentSeasonStats !== undefined && profile.allTimeStats !== undefined;
+  return (
+    profile.currentSeasonStats !== undefined &&
+    profile.allTimeStats !== undefined &&
+    Array.isArray(profile.allTimeStats.allUmas)
+  );
 }
 
 function hasResolvedProfileStatLabels(profile: PlayerProfileSummary): boolean {
-  return [profile.topUmas, profile.currentSeasonStats?.topUmas, profile.allTimeStats?.topUmas]
-    .every((topUmas) => hasResolvedTopUmaLabels(topUmas));
+  return [
+    profile.topUmas,
+    profile.bestUmas,
+    profile.allUmas,
+    profile.currentSeasonStats?.topUmas,
+    profile.currentSeasonStats?.bestUmas,
+    profile.currentSeasonStats?.allUmas,
+    profile.allTimeStats?.topUmas,
+    profile.allTimeStats?.bestUmas,
+    profile.allTimeStats?.allUmas
+  ].every((umas) => hasResolvedUmaMetadata(umas));
 }
 
-function hasResolvedTopUmaLabels(topUmas: PlayerProfileSummary['topUmas']): boolean {
-  if (topUmas === undefined || topUmas.length === 0) {
+function hasResolvedUmaMetadata(umas: PlayerProfileSummary['topUmas']): boolean {
+  if (umas === undefined || umas.length === 0) {
     return true;
   }
 
-  return topUmas.every((uma) => uma.name !== uma.umaId);
+  return umas.every((uma) => uma.name !== uma.umaId && !isHashedUmaAssetUrl(uma.imageUrl));
 }
 
 function getRefreshCooldownMs(updatedAt: number | undefined, now: number): number {

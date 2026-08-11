@@ -1,6 +1,7 @@
 export interface PlayerTopUmaSummary {
   umaId: string;
   name: string;
+  imageUrl?: string;
   matches: number;
   wins: number;
   losses: number;
@@ -10,6 +11,32 @@ export interface PlayerTopUmaSummary {
   podiums: number;
   mvpMatches: number;
   performanceScore?: number;
+}
+
+export interface PlayerRecentMatchSummary {
+  matchId: string;
+  reportedAt: string;
+  mode: string;
+  verificationState: string;
+  umaId: string | null;
+  umaName: string;
+  isWinner: boolean | null;
+  pointsScored: number;
+  podiums: number;
+  isMvp: boolean;
+  eloDelta?: number | null;
+}
+
+export interface PlayerRecentFormSummary {
+  matches: number;
+  scoredMatches: number;
+  scoringRate: number | null;
+  wins: number;
+  winRate: number | null;
+  points: number;
+  pointsPerGame: number | null;
+  podiums: number;
+  mvpMatches: number;
 }
 
 export type PlayerStatsScope = 'currentSeason' | 'allTime';
@@ -25,7 +52,11 @@ export interface PlayerProfileStatsSummary {
   mvpMatches?: number | null;
   topUmas?: PlayerTopUmaSummary[];
   bestUmas?: PlayerTopUmaSummary[];
+  allUmas?: PlayerTopUmaSummary[];
+  recentMatches?: PlayerRecentMatchSummary[];
+  recentForm?: PlayerRecentFormSummary;
   bestUmaScoreVersion?: number;
+  recentHistoryVersion?: number;
 }
 
 export interface PlayerProfileSummary {
@@ -47,7 +78,11 @@ export interface PlayerProfileSummary {
   mvpMatches?: number | null;
   topUmas?: PlayerTopUmaSummary[];
   bestUmas?: PlayerTopUmaSummary[];
+  allUmas?: PlayerTopUmaSummary[];
+  recentMatches?: PlayerRecentMatchSummary[];
+  recentForm?: PlayerRecentFormSummary;
   bestUmaScoreVersion?: number;
+  recentHistoryVersion?: number;
   statsScope?: PlayerStatsScope;
   currentSeasonStats?: PlayerProfileStatsSummary;
   allTimeStats?: PlayerProfileStatsSummary;

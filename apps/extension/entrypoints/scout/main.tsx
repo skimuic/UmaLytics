@@ -1,10 +1,10 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from '../sidepanel/App';
-import '../sidepanel/styles.css';
+import App from './App';
+import './styles.css';
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <App surface="popout" />
+    <App />
   </React.StrictMode>
 );
