@@ -9,6 +9,7 @@ import type {
   TeamId
 } from '@umalytics/shared';
 import { extractRoomCodeFromRoomDom } from './domLobbyExtraction';
+import { getUmaDisplayName, normalizeUmaOutfitId } from './umaPortraits';
 
 const TEAM_IDS = ['team1', 'team2'] as const satisfies readonly TeamId[];
 
@@ -115,11 +116,12 @@ function collectSyncedUmaActions(value: unknown): DraftUmaAction[] {
 
   walkDraftRecords(value, [], (record, path) => {
     const umaId = readUmaId(record);
-    const name = readOptionalString(record.name)
+    const rawName = readOptionalString(record.name)
       ?? readOptionalString(record.umaName)
       ?? readOptionalString(record.charaName)
       ?? readOptionalString(record.cardName)
       ?? umaId;
+    const name = umaId === undefined ? rawName : getUmaDisplayName(umaId, rawName);
     const team = readOptionalTeamId(record.team)
       ?? readOptionalTeamId(record.currentTeam)
       ?? readTeamFromPath(path);
@@ -302,14 +304,14 @@ function extractDomMaps(team: TeamId, panel: HTMLElement): DraftMapSelection[] {
       const ariaLabel = element.getAttribute('aria-label') ?? '';
       const ariaName = /^Open\s+(.+?)\s+map helper$/i.exec(ariaLabel)?.[1];
       const lines = getTextLines(element);
-      const name = ariaName ?? lines.find((line) => !/^\d+$/.test(line));
+      const name = ariaName ?? lines.find((line) => !isDraftMapOrder(line));
 
       if (name === undefined || name === '?') {
         return [];
       }
 
       const details = lines
-        .filter((line) => line !== name && !/^\d+$/.test(line) && !/^[x×✕✖]$/i.test(line))
+        .filter((line) => line !== name && !isDraftMapOrder(line) && !isDraftCrossMark(line))
         .join(' - ');
       const status = element.querySelector('.line-through') !== null ? 'vetoed' : 'selected';
 
@@ -359,6 +361,7 @@ function extractDomUmaActions(team: TeamId, panel: HTMLElement): DraftUmaAction[
         ? 'ban'
         : 'pick';
     const umaId = extractUmaIdFromImageUrl(image.src);
+    const displayName = umaId === undefined ? name : getUmaDisplayName(umaId, name);
     const key = `${kind}:${team}:${umaId ?? name}`;
 
     if (seen.has(key)) {
@@ -370,7 +373,7 @@ function extractDomUmaActions(team: TeamId, panel: HTMLElement): DraftUmaAction[
       kind,
       team,
       ...(umaId === undefined ? {} : { umaId }),
-      name,
+      name: displayName,
       imageUrl: image.src,
       order: actions.length + 1
     });
@@ -401,7 +404,7 @@ function findClosestDraftCard(element: HTMLElement): HTMLElement | null {
 }
 
 function readUmaId(record: Record<string, unknown>): string | undefined {
-  return readOptionalString(record.umaId)
+  const umaId = readOptionalString(record.umaId)
     ?? readOptionalString(record.cardId)
     ?? readOptionalString(record.selectedUmaId)
     ?? readOptionalString(record.outfitId)
@@ -409,6 +412,8 @@ function readUmaId(record: Record<string, unknown>): string | undefined {
     ?? readOptionalNumber(record.cardId)?.toString()
     ?? readOptionalNumber(record.selectedUmaId)?.toString()
     ?? readOptionalNumber(record.outfitId)?.toString();
+
+  return umaId === undefined ? undefined : normalizeUmaOutfitId(umaId);
 }
 
 function readUmaActionKind(record: Record<string, unknown>, path: string[]): DraftUmaActionKind {
@@ -521,8 +526,18 @@ function getTextLines(element: HTMLElement): string[] {
     .filter((line): line is string => line !== undefined);
 }
 
+function isDraftMapOrder(value: string): boolean {
+  return /^\d+$/.test(value);
+}
+
+function isDraftCrossMark(value: string): boolean {
+  return value === 'x' || value === 'X' || value === '\u00d7' || value === '\u2715' || value === '\u2716';
+}
+
 function extractUmaIdFromImageUrl(value: string): string | undefined {
-  return /chara_stand_\d+_(\d+)\.webp/i.exec(value)?.[1];
+  const umaId = /chara_stand_\d+_(\d+)\.webp/i.exec(value)?.[1];
+
+  return umaId === undefined ? undefined : normalizeUmaOutfitId(umaId);
 }
 
 function normalizeText(value: string | null | undefined): string | undefined {

@@ -32,7 +32,13 @@ import {
   MANUAL_PROFILE_REFRESH_COOLDOWN_MS,
   RECENT_HISTORY_DISPLAY_MATCHES
 } from '../../utils/profileConstants';
-import { getUmaPortraitUrl, isHashedUmaAssetUrl } from '../../utils/umaPortraits';
+import { releaseOrder } from '../../utils/umaReleaseOrder';
+import {
+  getUmaDisplayName,
+  getUmaPortraitUrl,
+  isHashedUmaAssetUrl,
+  normalizeUmaOutfitId
+} from '../../utils/umaPortraits';
 
 const TEAM_IDS = ['team1', 'team2'] as const satisfies readonly TeamId[];
 const TEAM_SLOT_COUNT = 5;
@@ -40,13 +46,14 @@ const DRAFT_MAP_SLOT_COUNT = 4;
 const DRAFT_PICK_SLOT_COUNT = 6;
 const DRAFT_BAN_SLOT_COUNT = 2;
 const DRAFT_VETO_SLOT_COUNT = 1;
+const DRAFT_DETAIL_SEPARATOR = ' \u2022 ';
 const THEME_STORAGE_KEY = 'sidePanelTheme';
 const STATS_SCOPE_STORAGE_KEY = 'statsScope';
 const ACTIVE_CLOCK_REFRESH_MS = 1_000;
 const IDLE_CLOCK_REFRESH_MS = 15_000;
 
 type AppTheme = 'dark' | 'light';
-type AppScene = 'lobby' | 'draft';
+type AppScene = 'lobby' | 'draft' | 'umas';
 type NotableBadgeTone = 'rank' | 'scoring' | 'sample' | 'private';
 type UmaBadgeTone = 'scoring' | 'winrate' | 'sample' | 'caution';
 type SampleConfidence = 'small' | 'steady' | 'proven';
@@ -79,6 +86,13 @@ interface UmaExperienceEntry {
   discordId: string;
   displayName: string;
   uma: PlayerTopUmaSummary;
+}
+
+interface UmaCatalogOption {
+  umaId: string;
+  name: string;
+  imageUrl: string | undefined;
+  order: number | undefined;
 }
 
 export default function App() {
@@ -185,7 +199,7 @@ export default function App() {
   };
 
   return (
-    <main className={`app-shell theme-${theme} surface-scout`}>
+    <main className={`app-shell theme-${theme} surface-scout scene-${activeScene}`}>
       <header className="app-header">
         <div>
           <h1>UmaLytics</h1>
@@ -216,6 +230,16 @@ export default function App() {
               }}
             >
               Draft
+            </button>
+            <button
+              type="button"
+              className={activeScene === 'umas' ? 'active' : ''}
+              onClick={() => {
+                setSelectedPlayerKey(undefined);
+                setActiveScene('umas');
+              }}
+            >
+              Umas
             </button>
           </div>
         </div>
@@ -299,6 +323,12 @@ export default function App() {
           profiles={profileSnapshot?.profiles ?? {}}
           statsScope={statsScope}
         />
+      ) : activeScene === 'umas' ? (
+        <UmaPlannerScene
+          roster={roster}
+          profiles={profileSnapshot?.profiles ?? {}}
+          statsScope={statsScope}
+        />
       ) : (
         <section className="team-list" aria-label="Detected lobby teams">
           {teamGroups.map((team) => (
@@ -371,6 +401,263 @@ function DraftScene({
         ))}
       </div>
     </section>
+  );
+}
+
+function UmaPlannerScene({
+  roster,
+  profiles,
+  statsScope
+}: {
+  roster: PrematchRoster;
+  profiles: Record<string, PlayerProfileSummary>;
+  statsScope: PlayerStatsScope;
+}) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const catalog = useMemo(() => getUmaCatalogOptions(profiles, statsScope), [profiles, statsScope]);
+  const filteredCatalog = useMemo(
+    () => filterUmaCatalogOptions(catalog, searchQuery),
+    [catalog, searchQuery]
+  );
+  const [selectedUmaId, setSelectedUmaId] = useState<string | undefined>();
+  const selectedUma = filteredCatalog.find((uma) => uma.umaId === selectedUmaId) ?? filteredCatalog[0];
+  const historyCounts = useMemo(
+    () => getUmaHistoryCounts(catalog, roster.players, profiles, statsScope),
+    [catalog, profiles, roster.players, statsScope]
+  );
+
+  useEffect(() => {
+    if (filteredCatalog.length === 0) {
+      setSelectedUmaId(undefined);
+      return;
+    }
+
+    if (selectedUmaId === undefined || !filteredCatalog.some((uma) => uma.umaId === selectedUmaId)) {
+      const firstUma = filteredCatalog[0];
+
+      if (firstUma !== undefined) {
+        setSelectedUmaId(firstUma.umaId);
+      }
+    }
+  }, [filteredCatalog, selectedUmaId]);
+
+  return (
+    <section className="uma-planner-scene" aria-label="Uma planner">
+      <header className="uma-planner-header">
+        <div>
+          <h2>Uma Planner</h2>
+          <p>Full Uma catalog - {formatStatsScopeShortLabel(statsScope)} lobby history</p>
+        </div>
+        <label className="uma-search">
+          <span>Search Umas</span>
+          <input
+            type="search"
+            value={searchQuery}
+            placeholder="Search by Uma name"
+            onChange={(event) => {
+              setSearchQuery(event.currentTarget.value);
+            }}
+          />
+        </label>
+      </header>
+
+      <div className="uma-planner-layout">
+        <UmaPlanningPanel
+          selectedUma={selectedUma}
+          roster={roster}
+          profiles={profiles}
+          statsScope={statsScope}
+        />
+
+        <section className="uma-catalog-panel" aria-label="Uma catalog">
+          <div className="uma-catalog-summary">
+            <strong>{filteredCatalog.length}</strong>
+            <span>{searchQuery.trim().length === 0 ? 'Uma Catalog' : 'matching Umas'}</span>
+          </div>
+          {filteredCatalog.length === 0 ? (
+            <div className="uma-catalog-empty">
+              <strong>No matching Umas</strong>
+              <span>Try a different search.</span>
+            </div>
+          ) : (
+            <div className="uma-catalog-grid">
+              {filteredCatalog.map((uma) => (
+                <UmaCatalogButton
+                  key={uma.umaId}
+                  uma={uma}
+                  isSelected={uma.umaId === selectedUma?.umaId}
+                  historyCount={historyCounts.get(uma.umaId) ?? 0}
+                  onSelect={setSelectedUmaId}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </section>
+  );
+}
+
+function UmaCatalogButton({
+  uma,
+  isSelected,
+  historyCount,
+  onSelect
+}: {
+  uma: UmaCatalogOption;
+  isSelected: boolean;
+  historyCount: number;
+  onSelect: (umaId: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={isSelected ? 'uma-catalog-button selected' : 'uma-catalog-button'}
+      aria-pressed={isSelected}
+      title={uma.name}
+      onClick={() => {
+        onSelect(uma.umaId);
+      }}
+    >
+      <span className="uma-catalog-portrait">
+        <UmaImage imageUrl={uma.imageUrl} name={uma.name} />
+        {historyCount > 0 ? <span className="uma-catalog-count">{historyCount}</span> : null}
+      </span>
+      <span className="uma-catalog-name">{uma.name}</span>
+    </button>
+  );
+}
+
+function UmaPlanningPanel({
+  selectedUma,
+  roster,
+  profiles,
+  statsScope
+}: {
+  selectedUma: UmaCatalogOption | undefined;
+  roster: PrematchRoster;
+  profiles: Record<string, PlayerProfileSummary>;
+  statsScope: PlayerStatsScope;
+}) {
+  if (selectedUma === undefined) {
+    return (
+      <section className="uma-planning-panel empty" aria-label="Selected Uma history">
+        <h3>No Uma selected</h3>
+      </section>
+    );
+  }
+
+  const action = getUmaCatalogAction(selectedUma);
+  const teams = getTeamGroups(roster);
+  const totalExperience = getUmaExperience(action, roster.players, profiles, statsScope).length;
+
+  return (
+    <section className="uma-planning-panel" aria-label={`${selectedUma.name} lobby history`}>
+      <header className="uma-planning-heading">
+        <span className="uma-planning-portrait">
+          <UmaImage imageUrl={selectedUma.imageUrl} name={selectedUma.name} loading="eager" />
+        </span>
+        <div>
+          <h3>{selectedUma.name}</h3>
+          <p>
+            {totalExperience} {totalExperience === 1 ? 'player' : 'players'} with {formatStatsScopeShortLabel(statsScope)} history
+          </p>
+        </div>
+      </header>
+
+      <div className="uma-planning-team-grid">
+        {TEAM_IDS.map((teamId) => (
+          <UmaPlanningTeamPanel
+            key={teamId}
+            team={teams.find((team) => team.id === teamId)}
+            fallbackTeamId={teamId}
+            action={action}
+            profiles={profiles}
+            statsScope={statsScope}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function UmaPlanningTeamPanel({
+  team,
+  fallbackTeamId,
+  action,
+  profiles,
+  statsScope
+}: {
+  team: PrematchTeam | undefined;
+  fallbackTeamId: TeamId;
+  action: DraftUmaAction;
+  profiles: Record<string, PlayerProfileSummary>;
+  statsScope: PlayerStatsScope;
+}) {
+  const players = getDraftSlots(team?.players ?? [], TEAM_SLOT_COUNT);
+  const historyCount = (team?.players ?? []).filter((player) =>
+    findScopedUmaEntry(action, profiles[player.discordId], statsScope) !== undefined
+  ).length;
+
+  return (
+    <article className={`uma-planning-team ${fallbackTeamId}`}>
+      <header>
+        <h4>{team?.name ?? (fallbackTeamId === 'team1' ? 'Team 1' : 'Team 2')}</h4>
+        <p>
+          {historyCount}/{team?.players.length ?? 0} with {formatStatsScopeShortLabel(statsScope)} history
+        </p>
+      </header>
+      <ol className="uma-planning-slots">
+        {players.map((player, index) => (
+          <UmaPlanningPlayerSlot
+            key={player === undefined ? `${fallbackTeamId}:empty:${index}` : getPlayerKey(player)}
+            player={player}
+            action={action}
+            profile={player === undefined ? undefined : profiles[player.discordId]}
+            statsScope={statsScope}
+            slotNumber={index + 1}
+          />
+        ))}
+      </ol>
+    </article>
+  );
+}
+
+function UmaPlanningPlayerSlot({
+  player,
+  action,
+  profile,
+  statsScope,
+  slotNumber
+}: {
+  player: PrematchPlayer | undefined;
+  action: DraftUmaAction;
+  profile: PlayerProfileSummary | undefined;
+  statsScope: PlayerStatsScope;
+  slotNumber: number;
+}) {
+  if (player === undefined) {
+    return (
+      <li className="uma-planning-player empty">
+        <strong>Open slot</strong>
+        <span>Slot {slotNumber}</span>
+      </li>
+    );
+  }
+
+  const uma = findScopedUmaEntry(action, profile, statsScope);
+
+  return (
+    <li className={uma === undefined ? 'uma-planning-player no-history' : 'uma-planning-player'}>
+      <strong>{profile?.displayName ?? player.displayName}</strong>
+      {uma === undefined ? (
+        <span>No games played</span>
+      ) : (
+        <span>
+          {uma.matches} GP - {formatDecimal(uma.pointsPerGame)} PPG - {formatPercent(uma.winRate)}
+        </span>
+      )}
+    </li>
   );
 }
 
@@ -567,11 +854,7 @@ function DraftPickSlot({
         title={action.name}
       >
         <span className="draft-pick-icon">
-          {imageUrl === undefined ? (
-            <span>{getUmaInitials(action.name)}</span>
-          ) : (
-            <img src={imageUrl} alt="" loading="lazy" />
-          )}
+          <UmaImage imageUrl={imageUrl} name={action.name} />
         </span>
         {experienceCount > 0 ? <span className="draft-pick-count">{experienceCount}</span> : null}
       </button>
@@ -682,11 +965,7 @@ function DraftUmaActionRow({
     <li className={`draft-uma-row ${action.kind} no-history`}>
       <span className="draft-uma-main">
         <span className="draft-uma-portrait">
-          {imageUrl === undefined ? (
-            <span>{getUmaInitials(action.name)}</span>
-          ) : (
-            <img src={imageUrl} alt="" loading="lazy" />
-          )}
+          <UmaImage imageUrl={imageUrl} name={action.name} />
         </span>
         <span className="draft-uma-copy">
           <strong>{action.name}</strong>
@@ -707,7 +986,7 @@ function getDraftSlots<T>(items: T[], slotCount: number): Array<T | undefined> {
 }
 
 function getDraftActionKey(action: DraftUmaAction): string {
-  return `${action.kind}:${action.team}:${action.order ?? action.umaId ?? action.name}`;
+  return `${action.kind}:${action.team}:${action.order ?? 'pending'}:${action.umaId ?? action.name}`;
 }
 
 function TeamSection({
@@ -1222,7 +1501,7 @@ function BestUmasList({
             ) : (
               <li key={uma.umaId} className="best-uma-row">
                 <span className="best-uma-heading">
-                  <UmaPortrait uma={uma} />
+                  <BestUmaPortrait uma={uma} />
                   <span className="best-uma-copy">
                     <span className="uma-name" title={uma.name}>
                       {uma.name}
@@ -1268,33 +1547,46 @@ function BestUmasList({
   );
 }
 
-function UmaPortrait({ uma }: { uma: PlayerTopUmaSummary }) {
-  const [hasImageError, setHasImageError] = useState(false);
+function BestUmaPortrait({ uma }: { uma: PlayerTopUmaSummary }) {
   const fallbackImageUrl = getFallbackUmaImageUrl(uma.umaId);
   const imageUrl = isHashedUmaAssetUrl(uma.imageUrl)
     ? fallbackImageUrl
     : uma.imageUrl ?? fallbackImageUrl;
+
+  return (
+    <span className="best-uma-portrait" aria-hidden="true">
+      <UmaImage imageUrl={imageUrl} name={uma.name} />
+    </span>
+  );
+}
+
+function UmaImage({
+  imageUrl,
+  name,
+  loading = 'lazy'
+}: {
+  imageUrl: string | undefined;
+  name: string;
+  loading?: 'eager' | 'lazy';
+}) {
+  const [hasImageError, setHasImageError] = useState(false);
   const shouldShowImage = imageUrl !== undefined && !hasImageError;
 
   useEffect(() => {
     setHasImageError(false);
   }, [imageUrl]);
 
-  return (
-    <span className="best-uma-portrait" aria-hidden="true">
-      {shouldShowImage ? (
-        <img
-          src={imageUrl}
-          alt=""
-          loading="lazy"
-          onError={() => {
-            setHasImageError(true);
-          }}
-        />
-      ) : (
-        <span>{getUmaInitials(uma.name)}</span>
-      )}
-    </span>
+  return shouldShowImage ? (
+    <img
+      src={imageUrl}
+      alt=""
+      loading={loading}
+      onError={() => {
+        setHasImageError(true);
+      }}
+    />
+  ) : (
+    <span>{getUmaInitials(name)}</span>
   );
 }
 
@@ -1456,6 +1748,105 @@ function getDisplayedProfileStats(
   };
 }
 
+function getUmaCatalogOptions(
+  profiles: Record<string, PlayerProfileSummary>,
+  statsScope: PlayerStatsScope
+): UmaCatalogOption[] {
+  const catalog = new Map<string, UmaCatalogOption>();
+
+  releaseOrder.forEach((entry, index) => {
+    const umaId = normalizeUmaOutfitId(entry.outfitId);
+
+    catalog.set(umaId, {
+      umaId,
+      name: getUmaDisplayName(umaId, entry.name),
+      imageUrl: getUmaPortraitUrl(umaId),
+      order: index + 1
+    });
+  });
+
+  for (const profile of Object.values(profiles)) {
+    const displayedProfile = getDisplayedProfileStats(profile, statsScope);
+    const umas = displayedProfile?.allUmas ?? profile.allUmas ?? [];
+
+    for (const uma of umas) {
+      const umaId = getUmaCatalogKey(uma.umaId, uma.name);
+      const current = catalog.get(umaId);
+      const profileImageUrl =
+        uma.imageUrl !== undefined && !isHashedUmaAssetUrl(uma.imageUrl) ? uma.imageUrl : undefined;
+
+      catalog.set(umaId, {
+        umaId,
+        name: getUmaDisplayName(umaId, uma.name),
+        imageUrl: profileImageUrl ?? current?.imageUrl ?? getUmaPortraitUrl(umaId),
+        order: current?.order
+      });
+    }
+  }
+
+  return sortUmaCatalogOptions(Array.from(catalog.values()));
+}
+
+function sortUmaCatalogOptions(catalog: UmaCatalogOption[]): UmaCatalogOption[] {
+  return catalog.sort((left, right) => {
+    const leftOrder = left.order ?? Number.NEGATIVE_INFINITY;
+    const rightOrder = right.order ?? Number.NEGATIVE_INFINITY;
+    const orderDelta = rightOrder - leftOrder;
+
+    if (orderDelta !== 0) {
+      return orderDelta;
+    }
+
+    const nameDelta = left.name.localeCompare(right.name);
+
+    if (nameDelta !== 0) {
+      return nameDelta;
+    }
+
+    return left.umaId.localeCompare(right.umaId);
+  });
+}
+
+function getUmaCatalogKey(umaId: string | undefined, name: string): string {
+  return umaId === undefined ? normalizeSearchText(name) : normalizeUmaOutfitId(umaId);
+}
+
+function filterUmaCatalogOptions(
+  catalog: UmaCatalogOption[],
+  searchQuery: string
+): UmaCatalogOption[] {
+  const normalizedQuery = normalizeSearchText(searchQuery);
+
+  if (normalizedQuery.length === 0) {
+    return catalog;
+  }
+
+  return catalog.filter((uma) => normalizeSearchText(uma.name).includes(normalizedQuery));
+}
+
+function getUmaHistoryCounts(
+  catalog: UmaCatalogOption[],
+  rosterPlayers: PrematchPlayer[],
+  profiles: Record<string, PlayerProfileSummary>,
+  statsScope: PlayerStatsScope
+): Map<string, number> {
+  return new Map(
+    catalog.map((uma) => [
+      uma.umaId,
+      getUmaExperience(getUmaCatalogAction(uma), rosterPlayers, profiles, statsScope).length
+    ])
+  );
+}
+
+function getUmaCatalogAction(uma: UmaCatalogOption): DraftUmaAction {
+  return {
+    kind: 'pick',
+    team: 'team1',
+    name: uma.name,
+    umaId: uma.umaId
+  };
+}
+
 function getUmaExperience(
   action: DraftUmaAction,
   rosterPlayers: PrematchPlayer[],
@@ -1498,7 +1889,8 @@ function findScopedUmaEntry(
   const umas = scopedStats?.allUmas ?? profile?.allUmas ?? [];
 
   if (action.umaId !== undefined) {
-    const exactMatch = umas.find((uma) => uma.umaId === action.umaId);
+    const normalizedUmaId = normalizeUmaOutfitId(action.umaId);
+    const exactMatch = umas.find((uma) => normalizeUmaOutfitId(uma.umaId) === normalizedUmaId);
 
     if (exactMatch !== undefined) {
       return exactMatch;
@@ -1744,7 +2136,7 @@ function formatDraftPhase(phase: string): string {
 function formatDraftMapTitle(map: DraftTeamSnapshot['maps'][number]): string {
   const details = formatDraftMapDetails(map);
 
-  return details === undefined ? map.name : `${map.name} • ${details}`;
+  return details === undefined ? map.name : `${map.name}${DRAFT_DETAIL_SEPARATOR}${details}`;
 }
 
 function formatDraftMapDetails(map: DraftTeamSnapshot['maps'][number]): string | undefined {
@@ -1758,7 +2150,7 @@ function formatDraftMapDetails(map: DraftTeamSnapshot['maps'][number]): string |
     .split(/\s*(?:[-\u2013\u2014]|\u2022)\s*/u)
     .map((part) => part.trim())
     .filter((part) => part.length > 0)
-    .join(' • ');
+    .join(DRAFT_DETAIL_SEPARATOR);
 
   return details.length === 0 ? undefined : details;
 }
@@ -1773,13 +2165,13 @@ function formatTiebreakerMap(map: NonNullable<DraftSnapshot['tiebreakerMap']>): 
   const details = parsed.details
     .map(formatTiebreakerDetailToken)
     .filter((part): part is string => part !== undefined && part.length > 0)
-    .join(' • ');
+    .join(DRAFT_DETAIL_SEPARATOR);
 
   if (details.length === 0) {
     return parsed.name;
   }
 
-  return `${parsed.name} • ${details}`;
+  return `${parsed.name}${DRAFT_DETAIL_SEPARATOR}${details}`;
 }
 
 function parseTiebreakerMapParts(
@@ -1871,6 +2263,14 @@ function normalizeUmaNameForLookup(name: string): string {
     .trim();
 }
 
+function normalizeSearchText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function formatBestUmaLine(uma: PlayerTopUmaSummary | undefined): string {
   if (uma === undefined) {
     return 'No data';
@@ -1900,6 +2300,10 @@ function formatScoringValue(pointsPerGame: number | null | undefined): string {
   const formattedScoring = formatDecimal(pointsPerGame);
 
   return formattedScoring === '-' ? '-' : `${formattedScoring} PPG`;
+}
+
+function formatStatsScopeShortLabel(statsScope: PlayerStatsScope): string {
+  return statsScope === 'currentSeason' ? 'seasonal' : 'all-time';
 }
 
 function formatWinRateDetail(winRate: number | null | undefined): string {

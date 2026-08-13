@@ -1,3 +1,5 @@
+import { releaseOrder } from './umaReleaseOrder';
+
 const DEFAULT_PROFILE_ORIGIN = 'https://drafter.uma.guide';
 
 const UMA_PORTRAIT_ID_OVERRIDES = new Map<string, string>([
@@ -33,6 +35,14 @@ const UMA_PORTRAIT_ID_OVERRIDES = new Map<string, string>([
   ['102602', '102613'] // Valentine Mihono Bourbon
 ]);
 
+const UMA_OUTFIT_ID_BY_PORTRAIT_ID = new Map(
+  Array.from(UMA_PORTRAIT_ID_OVERRIDES, ([outfitId, portraitId]) => [portraitId, outfitId] as const)
+);
+
+const UMA_RELEASE_ENTRY_BY_OUTFIT_ID = new Map(
+  releaseOrder.map((entry) => [entry.outfitId, entry] as const)
+);
+
 export function getUmaPortraitUrl(
   umaId: string,
   origin = DEFAULT_PROFILE_ORIGIN
@@ -45,6 +55,26 @@ export function getUmaPortraitUrl(
   const charaId = portraitId.slice(0, 4);
 
   return new URL(`/uma/chara_stand_${charaId}_${portraitId}.webp`, origin).href;
+}
+
+export function normalizeUmaOutfitId(umaId: string): string {
+  return UMA_OUTFIT_ID_BY_PORTRAIT_ID.get(umaId) ?? umaId;
+}
+
+export function getUmaDisplayName(umaId: string, fallbackName?: string): string {
+  const releaseEntry = UMA_RELEASE_ENTRY_BY_OUTFIT_ID.get(normalizeUmaOutfitId(umaId));
+
+  if (releaseEntry === undefined) {
+    return fallbackName ?? umaId;
+  }
+
+  const variant = releaseEntry.variant.trim();
+
+  if (variant.length === 0 || variant.toLowerCase() === 'alt') {
+    return releaseEntry.name;
+  }
+
+  return `${variant} ${releaseEntry.name}`;
 }
 
 export function isHashedUmaAssetUrl(imageUrl: string | undefined): boolean {
