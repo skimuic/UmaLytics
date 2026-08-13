@@ -550,6 +550,21 @@ function UmaPlanningPanel({
   const action = getUmaCatalogAction(selectedUma);
   const teams = getTeamGroups(roster);
   const totalExperience = getUmaExperience(action, roster.players, profiles, statsScope).length;
+  const scopeLabel = formatStatsScopeShortLabel(statsScope);
+  const teamSummaries = TEAM_IDS.map((teamId) => {
+    const team = teams.find((team) => team.id === teamId);
+    const players = team?.players ?? [];
+    const historyCount = players.filter((player) =>
+      findScopedUmaEntry(action, profiles[player.discordId], statsScope) !== undefined
+    ).length;
+
+    return {
+      id: teamId,
+      name: team?.name ?? (teamId === 'team1' ? 'Team 1' : 'Team 2'),
+      historyCount,
+      playerCount: players.length
+    };
+  });
 
   return (
     <section className="uma-planning-panel" aria-label={`${selectedUma.name} lobby history`}>
@@ -560,10 +575,27 @@ function UmaPlanningPanel({
         <div>
           <h3>{selectedUma.name}</h3>
           <p>
-            {totalExperience} {totalExperience === 1 ? 'player' : 'players'} with {formatStatsScopeShortLabel(statsScope)} history
+            {totalExperience} {totalExperience === 1 ? 'player' : 'players'} with {scopeLabel} history
           </p>
         </div>
       </header>
+
+      <div className="uma-planning-summary" aria-label={`${selectedUma.name} lobby history summary`}>
+        <span>
+          <strong>{totalExperience}/{roster.players.length}</strong>
+          <small>Lobby players</small>
+        </span>
+        {teamSummaries.map((team) => (
+          <span key={team.id}>
+            <strong>{team.historyCount}/{team.playerCount}</strong>
+            <small>{team.name}</small>
+          </span>
+        ))}
+        <span>
+          <strong>{scopeLabel}</strong>
+          <small>Stat scope</small>
+        </span>
+      </div>
 
       <div className="uma-planning-team-grid">
         {TEAM_IDS.map((teamId) => (
