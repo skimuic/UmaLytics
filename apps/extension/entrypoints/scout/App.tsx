@@ -47,12 +47,10 @@ const DRAFT_PICK_SLOT_COUNT = 6;
 const DRAFT_BAN_SLOT_COUNT = 2;
 const DRAFT_VETO_SLOT_COUNT = 1;
 const DRAFT_DETAIL_SEPARATOR = ' \u2022 ';
-const THEME_STORAGE_KEY = 'sidePanelTheme';
 const STATS_SCOPE_STORAGE_KEY = 'statsScope';
 const ACTIVE_CLOCK_REFRESH_MS = 1_000;
 const IDLE_CLOCK_REFRESH_MS = 15_000;
 
-type AppTheme = 'dark' | 'light';
 type AppScene = 'lobby' | 'draft' | 'umas';
 type NotableBadgeTone = 'rank' | 'scoring' | 'sample' | 'private';
 type UmaBadgeTone = 'scoring' | 'winrate' | 'sample' | 'caution';
@@ -99,7 +97,6 @@ export default function App() {
   const [roster, setRoster] = useState<PrematchRoster | undefined>();
   const [draftSnapshot, setDraftSnapshot] = useState<DraftSnapshot | undefined>();
   const [profileSnapshot, setProfileSnapshot] = useState<PlayerProfileSummariesSnapshot | undefined>();
-  const [theme, setTheme] = useState<AppTheme>('dark');
   const [statsScope, setStatsScope] = useState<PlayerStatsScope>('currentSeason');
   const [activeScene, setActiveScene] = useState<AppScene>('lobby');
   const [selectedPlayerKey, setSelectedPlayerKey] = useState<string | undefined>();
@@ -109,7 +106,6 @@ export default function App() {
     void getLatestPrematchRoster().then(setRoster);
     void getLatestDraftSnapshot().then(setDraftSnapshot);
     void getPlayerProfileSummaries().then(setProfileSnapshot);
-    void getStoredTheme().then(setTheme);
     void getStoredStatsScope().then(setStatsScope);
     void sendLobbyReconnectRequest();
 
@@ -179,12 +175,6 @@ export default function App() {
     }
   }, [selectedPlayerContext, selectedPlayerKey]);
 
-  const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    void browser.storage.local.set({ [THEME_STORAGE_KEY]: nextTheme });
-  };
-
   const selectStatsScope = (nextStatsScope: PlayerStatsScope) => {
     setStatsScope(nextStatsScope);
     void browser.storage.local.set({ [STATS_SCOPE_STORAGE_KEY]: nextStatsScope });
@@ -199,7 +189,7 @@ export default function App() {
   };
 
   return (
-    <main className={`app-shell theme-${theme} surface-scout scene-${activeScene}`}>
+    <main className={`app-shell surface-scout scene-${activeScene}`}>
       <header className="app-header">
         <div>
           <h1>UmaLytics</h1>
@@ -245,15 +235,6 @@ export default function App() {
         </div>
         <div className="header-actions">
           <div className="header-control-row">
-            <button
-              type="button"
-              className="theme-toggle"
-              role="switch"
-              aria-checked={theme === 'dark'}
-              onClick={toggleTheme}
-            >
-              {theme === 'dark' ? 'Dark' : 'Light'}
-            </button>
             {hasRoster ? (
               <button
                 type="button"
@@ -1092,6 +1073,7 @@ function PlayerRow({
   const statsMessage = getStatsMessage(profile, isProfileLoading, discordId);
   const notableBadges = getNotableBadges(displayedProfile);
   const isCaptain = player.isCaptain === true || player.role === 'captain';
+  const displayName = profile?.displayName ?? player.displayName;
 
   return (
     <li className={getPlayerRowClassName(partyVisual)}>
@@ -1099,30 +1081,34 @@ function PlayerRow({
         {profileUrl === undefined ? (
           <span className="player-name-row">
             <span className="player-identity">
-              <span className="player-name">{profile?.displayName ?? player.displayName}</span>
-              {isCaptain ? <CaptainCrown /> : null}
+              <span className="player-name" title={displayName}>{displayName}</span>
             </span>
-            <button type="button" className="expand-button" onClick={onShowDetails}>
-              Details
-            </button>
-            {isProfileLoading && discordId !== undefined ? (
-              <span className="player-inline-status">Refreshing</span>
-            ) : null}
+            <span className="player-actions">
+              {isCaptain ? <CaptainCrown /> : null}
+              <button type="button" className="expand-button" onClick={onShowDetails}>
+                Details
+              </button>
+              {isProfileLoading && discordId !== undefined ? (
+                <span className="player-inline-status">Refreshing</span>
+              ) : null}
+            </span>
           </span>
         ) : (
           <span className="player-name-row">
             <span className="player-identity">
-              <a className="player-name" href={profileUrl} target="_blank" rel="noreferrer">
-                {profile?.displayName ?? player.displayName}
+              <a className="player-name" href={profileUrl} target="_blank" rel="noreferrer" title={displayName}>
+                {displayName}
               </a>
-              {isCaptain ? <CaptainCrown /> : null}
             </span>
-            <button type="button" className="expand-button" onClick={onShowDetails}>
-              Details
-            </button>
-            {isProfileLoading && discordId !== undefined ? (
-              <span className="player-inline-status">Refreshing</span>
-            ) : null}
+            <span className="player-actions">
+              {isCaptain ? <CaptainCrown /> : null}
+              <button type="button" className="expand-button" onClick={onShowDetails}>
+                Details
+              </button>
+              {isProfileLoading && discordId !== undefined ? (
+                <span className="player-inline-status">Refreshing</span>
+              ) : null}
+            </span>
           </span>
         )}
         <span className="player-id">{discordId ?? 'Profile unavailable from room page'}</span>
@@ -2603,13 +2589,6 @@ function getStatsMessage(
   }
 
   return undefined;
-}
-
-async function getStoredTheme(): Promise<AppTheme> {
-  const values = await browser.storage.local.get(THEME_STORAGE_KEY);
-  const storedTheme = values[THEME_STORAGE_KEY];
-
-  return storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'dark';
 }
 
 async function getStoredStatsScope(): Promise<PlayerStatsScope> {

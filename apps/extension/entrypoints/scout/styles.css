@@ -31,15 +31,23 @@ body {
 }
 
 .app-header {
-  align-items: flex-start;
+  align-items: center;
+  background: #0b1220;
+  border: 1px solid #263244;
+  border-radius: 8px;
   display: flex;
   justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 20px;
+  gap: 20px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+}
+
+.app-header > div:first-child {
+  min-width: 0;
 }
 
 .app-header h1 {
-  font-size: 21px;
+  font-size: 22px;
   line-height: 1.15;
   margin: 0;
 }
@@ -74,7 +82,7 @@ body {
   display: inline-grid;
   gap: 2px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 8px;
+  margin-top: 10px;
   padding: 2px;
 }
 
@@ -109,7 +117,7 @@ body {
 .header-actions {
   align-items: flex-end;
   display: grid;
-  gap: 7px;
+  gap: 8px;
   justify-items: end;
 }
 
@@ -149,7 +157,6 @@ body {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
 }
 
-.theme-toggle,
 .refresh-button {
   background: #ffffff;
   border: 1px solid #d9e0ea;
@@ -1445,14 +1452,22 @@ a.player-name:hover {
   display: grid;
   gap: 6px;
   grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 34px;
   min-width: 0;
 }
 
 .player-identity {
-  align-items: flex-start;
+  display: block;
+  min-width: 0;
+}
+
+.player-actions {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+  justify-content: flex-end;
+  max-width: 88px;
   min-width: 0;
 }
 
@@ -1489,19 +1504,19 @@ a.player-name:hover {
   display: inline-flex;
   height: 18px;
   justify-content: center;
-  width: 20px;
+  line-height: 0;
+  width: 18px;
 }
 
 .captain-crown svg {
   display: block;
   fill: currentColor;
-  height: 13px;
+  height: 12px;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.7;
-  transform: translateY(1px);
-  width: 13px;
+  width: 12px;
 }
 
 .expand-button {
@@ -2182,88 +2197,86 @@ a.player-name:hover {
   opacity: 0.62;
 }
 
-.theme-dark {
+.app-shell {
   background: #080d18;
   color: #d1d5db;
 }
 
-.theme-dark .app-header p,
-.theme-dark .app-header .profile-freshness,
-.theme-dark .app-header .stats-scope-description,
-.theme-dark .team-header p,
-.theme-dark .player-id,
-.theme-dark .top-umas p,
-.theme-dark .stat-cell span {
+.app-header p,
+.app-header .profile-freshness,
+.app-header .stats-scope-description,
+.team-header p,
+.player-id,
+.top-umas p,
+.stat-cell span {
   color: #8f9bad;
 }
 
-.theme-dark .theme-toggle,
-.theme-dark .refresh-button,
-.theme-dark .scene-toggle,
-.theme-dark .stats-scope-toggle,
-.theme-dark .empty-state,
-.theme-dark .draft-scene-header,
-.theme-dark .draft-team-panel,
-.theme-dark .draft-map-list li,
-.theme-dark .draft-uma-row,
-.theme-dark .uma-planner-header,
-.theme-dark .uma-catalog-panel,
-.theme-dark .uma-catalog-button,
-.theme-dark .uma-planning-panel,
-.theme-dark .uma-planning-heading,
-.theme-dark .uma-planning-summary span,
-.theme-dark .uma-planning-team,
-.theme-dark .uma-planning-player,
-.theme-dark .detail-header,
-.theme-dark .detail-card,
-.theme-dark .detail-stat-panel,
-.theme-dark .back-button,
-.theme-dark .player-row {
+.refresh-button,
+.scene-toggle,
+.stats-scope-toggle,
+.empty-state,
+.draft-scene-header,
+.draft-team-panel,
+.draft-map-list li,
+.draft-uma-row,
+.uma-planner-header,
+.uma-catalog-panel,
+.uma-catalog-button,
+.uma-planning-panel,
+.uma-planning-heading,
+.uma-planning-summary span,
+.uma-planning-team,
+.uma-planning-player,
+.detail-header,
+.detail-card,
+.detail-stat-panel,
+.back-button,
+.player-row {
   background: #111827;
   border-color: #263244;
 }
 
-.theme-dark .detail-stat-panel {
+.detail-stat-panel {
   background: #0b1220;
 }
 
-.theme-dark .player-row.party-accent-1 {
+.player-row.party-accent-1 {
   background:
     linear-gradient(90deg, rgba(34, 211, 238, 0.2), transparent 48%),
     #111827;
 }
 
-.theme-dark .player-row.party-accent-2 {
+.player-row.party-accent-2 {
   background:
     linear-gradient(90deg, rgba(167, 139, 250, 0.22), transparent 48%),
     #111827;
 }
 
-.theme-dark .theme-toggle,
-.theme-dark .refresh-button,
-.theme-dark .back-button {
+.refresh-button,
+.back-button {
   color: #dbe7f7;
 }
 
-.theme-dark .stats-scope-toggle {
+.stats-scope-toggle {
   background: #0b1220;
 }
 
-.theme-dark .uma-search input,
-.theme-dark .uma-catalog-empty,
-.theme-dark .uma-catalog-button,
-.theme-dark .uma-planning-player {
+.uma-search input,
+.uma-catalog-empty,
+.uma-catalog-button,
+.uma-planning-player {
   background: #0b1220;
   border-color: #263244;
   color: #dbe7f7;
 }
 
-.theme-dark .uma-planning-player:not(.empty):not(.no-history) {
+.uma-planning-player:not(.empty):not(.no-history) {
   background: rgba(14, 165, 233, 0.1);
   border-color: rgba(56, 189, 248, 0.38);
 }
 
-.theme-dark .uma-catalog-button.selected {
+.uma-catalog-button.selected {
   background:
     linear-gradient(180deg, rgba(56, 189, 248, 0.17), rgba(56, 189, 248, 0.05)),
     #0f172a;
@@ -2271,422 +2284,417 @@ a.player-name:hover {
   box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.18);
 }
 
-.theme-dark .uma-catalog-count,
-.theme-dark .draft-pick-count {
+.uma-catalog-count,
+.draft-pick-count {
   border-color: #0f172a;
   box-shadow: 0 3px 9px rgba(14, 165, 233, 0.28), 0 1px 2px rgba(0, 0, 0, 0.44);
 }
 
-.theme-dark .uma-catalog-grid {
+.uma-catalog-grid {
   scrollbar-color: #334155 #0b1220;
 }
 
-.theme-dark .uma-catalog-grid::-webkit-scrollbar-track {
+.uma-catalog-grid::-webkit-scrollbar-track {
   background: #0b1220;
 }
 
-.theme-dark .uma-catalog-grid::-webkit-scrollbar-thumb {
+.uma-catalog-grid::-webkit-scrollbar-thumb {
   background: #334155;
   border-color: #0b1220;
 }
 
-.theme-dark .uma-catalog-grid::-webkit-scrollbar-thumb:hover {
+.uma-catalog-grid::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
 
-.theme-dark .scene-toggle {
+.scene-toggle {
   background: #0b1220;
 }
 
-.theme-dark .scene-toggle button {
+.scene-toggle button {
   color: #8f9bad;
 }
 
-.theme-dark .scene-toggle button.active {
+.scene-toggle button.active {
   background: #1f2a3a;
   box-shadow: none;
   color: #dbe7f7;
 }
 
-.theme-dark .stats-scope-toggle button {
+.stats-scope-toggle button {
   color: #8f9bad;
 }
 
-.theme-dark .stats-scope-toggle button.active {
+.stats-scope-toggle button.active {
   background: #1f2a3a;
   color: #dbe7f7;
   box-shadow: none;
 }
 
-.theme-dark .theme-toggle:hover,
-.theme-dark .refresh-button:hover:not(:disabled),
-.theme-dark .back-button:hover {
+.refresh-button:hover:not(:disabled),
+.back-button:hover {
   border-color: #3b82f6;
 }
 
-.theme-dark .status-pill.idle {
+.status-pill.idle {
   background: #263244;
   color: #cbd5e1;
 }
 
-.theme-dark .status-pill.live {
+.status-pill.live {
   background: #123a2a;
   color: #86efac;
 }
 
-.theme-dark .empty-state h2,
-.theme-dark .app-header h1,
-.theme-dark .draft-scene-header h2,
-.theme-dark .draft-team-panel h3,
-.theme-dark .draft-map-list strong,
-.theme-dark .draft-uma-copy strong,
-.theme-dark .draft-pick-experience-heading strong,
-.theme-dark .draft-pick-experience-list strong,
-.theme-dark .uma-planner-header h2,
-.theme-dark .uma-catalog-empty strong,
-.theme-dark .uma-catalog-summary strong,
-.theme-dark .uma-catalog-name,
-.theme-dark .uma-planning-heading h3,
-.theme-dark .uma-planning-summary strong,
-.theme-dark .uma-planning-team h4,
-.theme-dark .uma-planning-player strong,
-.theme-dark .detail-title h2,
-.theme-dark .team-header h2,
-.theme-dark .player-name,
-.theme-dark .stat-cell strong,
-.theme-dark .uma-name {
+.empty-state h2,
+.app-header h1,
+.draft-scene-header h2,
+.draft-team-panel h3,
+.draft-map-list strong,
+.draft-uma-copy strong,
+.draft-pick-experience-heading strong,
+.draft-pick-experience-list strong,
+.uma-planner-header h2,
+.uma-catalog-empty strong,
+.uma-catalog-summary strong,
+.uma-catalog-name,
+.uma-planning-heading h3,
+.uma-planning-summary strong,
+.uma-planning-team h4,
+.uma-planning-player strong,
+.detail-title h2,
+.team-header h2,
+.player-name,
+.stat-cell strong,
+.uma-name {
   color: #d1d5db;
 }
 
-.theme-dark .uma-planner-header p,
-.theme-dark .uma-search span,
-.theme-dark .uma-catalog-empty span,
-.theme-dark .uma-catalog-summary,
-.theme-dark .uma-planning-heading p,
-.theme-dark .uma-planning-summary small,
-.theme-dark .uma-planning-team p,
-.theme-dark .uma-planning-player span {
+.uma-planner-header p,
+.uma-search span,
+.uma-catalog-empty span,
+.uma-catalog-summary,
+.uma-planning-heading p,
+.uma-planning-summary small,
+.uma-planning-team p,
+.uma-planning-player span {
   color: #8f9bad;
 }
 
-.theme-dark .detail-title span,
-.theme-dark .detail-title p {
+.detail-title span,
+.detail-title p {
   color: #8f9bad;
 }
 
-.theme-dark .detail-title a:hover {
+.detail-title a:hover {
   color: #93c5fd;
 }
 
-.theme-dark a.player-name:hover {
+a.player-name:hover {
   color: #93c5fd;
 }
 
-.theme-dark .expand-button {
+.expand-button {
   background: #1f2a3a;
   border-color: #263244;
   color: #d1d5db;
 }
 
-.theme-dark .identity-tag {
+.identity-tag {
   background: #1f2a3a;
   border-color: #263244;
   color: #dbe7f7;
 }
 
-.theme-dark .identity-tag.party-accent-1 {
+.identity-tag.party-accent-1 {
   background: #0e3a45;
   border-color: #167083;
   color: #a5f3fc;
 }
 
-.theme-dark .identity-tag.party-accent-2 {
+.identity-tag.party-accent-2 {
   background: #2c214f;
   border-color: #5b4da3;
   color: #ddd6fe;
 }
 
-.theme-dark .captain-crown {
+.captain-crown {
   background: #3b2a0b;
   border-color: #b45309;
   color: #fbbf24;
 }
 
-.theme-dark .player-inline-status {
+.player-inline-status {
   background: #172338;
   border-color: #2b3a50;
   color: #cbd5e1;
 }
 
-.theme-dark .expand-button:hover {
+.expand-button:hover {
   border-color: #3b82f6;
   color: #93c5fd;
 }
 
-.theme-dark .player-title {
+.player-title {
   color: #7dd3fc;
 }
 
-.theme-dark .player-meta,
-.theme-dark .player-rank-line,
-.theme-dark .uma-meta,
-.theme-dark .draft-scene-header p,
-.theme-dark .draft-team-panel > header p,
-.theme-dark .draft-card-section > p,
-.theme-dark .draft-map-list small,
-.theme-dark .draft-uma-copy small,
-.theme-dark .draft-pick-slot small,
-.theme-dark .draft-pick-experience-heading span,
-.theme-dark .draft-pick-experience-list span,
-.theme-dark .section-message {
+.player-meta,
+.player-rank-line,
+.uma-meta,
+.draft-scene-header p,
+.draft-team-panel > header p,
+.draft-card-section > p,
+.draft-map-list small,
+.draft-uma-copy small,
+.draft-pick-slot small,
+.draft-pick-experience-heading span,
+.draft-pick-experience-list span,
+.section-message {
   color: #b6c0ce;
 }
 
-.theme-dark .draft-scene-header > span {
+.draft-scene-header > span {
   background: #102f45;
   border-color: #1c506f;
   color: #7dd3fc;
 }
 
-.theme-dark .draft-scene-header .draft-tiebreaker {
+.draft-scene-header .draft-tiebreaker {
   color: #7dd3fc;
 }
 
-.theme-dark .draft-card-section {
+.draft-card-section {
   border-top-color: #263244;
 }
 
-.theme-dark .draft-team-panel > header {
+.draft-team-panel > header {
   border-bottom-color: #263244;
 }
 
-.theme-dark .draft-map-list li {
+.draft-map-list li {
   background: transparent;
   border-color: transparent;
 }
 
-.theme-dark .draft-map-list li.vetoed {
+.draft-map-list li.vetoed {
   background: rgba(248, 113, 113, 0.1);
   border-color: rgba(248, 113, 113, 0.34);
 }
 
-.theme-dark .draft-map-order,
-.theme-dark .draft-uma-portrait,
-.theme-dark .draft-pick-icon,
-.theme-dark .uma-catalog-portrait,
-.theme-dark .uma-planning-portrait {
+.draft-map-order,
+.draft-uma-portrait,
+.draft-pick-icon,
+.uma-catalog-portrait,
+.uma-planning-portrait {
   background: #0b1220;
   border-color: #263244;
   color: #8f9bad;
 }
 
-.theme-dark .draft-map-status {
+.draft-map-status {
   background: rgba(127, 29, 29, 0.36);
   border-color: rgba(248, 113, 113, 0.42);
   color: #fecaca;
 }
 
-.theme-dark .draft-pick-slot button,
-.theme-dark .draft-pick-experience-panel,
-.theme-dark .draft-pick-experience-list li {
+.draft-pick-slot button,
+.draft-pick-experience-panel,
+.draft-pick-experience-list li {
   background: #0b1220;
   border-color: #263244;
 }
 
-.theme-dark .draft-pick-experience-list li.no-history {
+.draft-pick-experience-list li.no-history {
   background: rgba(15, 23, 42, 0.44);
 }
 
-.theme-dark .draft-pick-slot button:hover,
-.theme-dark .draft-pick-slot button.selected {
+.draft-pick-slot button:hover,
+.draft-pick-slot button.selected {
   border-color: #38bdf8;
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.18);
 }
 
-.theme-dark .draft-uma-row.ban {
+.draft-uma-row.ban {
   background: rgba(251, 191, 36, 0.08);
   border-color: #6f4f12;
 }
 
-.theme-dark .draft-uma-row.veto {
+.draft-uma-row.veto {
   background: rgba(248, 113, 113, 0.09);
   border-color: #7f1d1d;
 }
 
-.theme-dark .player-tag {
+.player-tag {
   background: #1f2a3a;
   border-color: #263244;
   color: #dbe7f7;
 }
 
-.theme-dark .notable-tag.rank {
+.notable-tag.rank {
   background: #3b2a0b;
   border-color: #b45309;
   color: #fbbf24;
 }
 
-.theme-dark .notable-tag.scoring {
+.notable-tag.scoring {
   background: #102f45;
   border-color: #0369a1;
   color: #7dd3fc;
 }
 
-.theme-dark .notable-tag.private {
+.notable-tag.private {
   background: #263244;
   border-color: #475569;
   color: #cbd5e1;
 }
 
-.theme-dark .notable-tag.sample {
+.notable-tag.sample {
   background: #123a2a;
   border-color: #15803d;
   color: #86efac;
 }
 
-.theme-dark .stat-cell {
+.stat-cell {
   background: #0b1220;
   border-color: #263244;
 }
 
-.theme-dark .scouting-report {
+.scouting-report {
   border-top-color: #263244;
 }
 
-.theme-dark .scouting-report p,
-.theme-dark .report-metric span,
-.theme-dark .report-metric small,
-.theme-dark .best-uma-stats small {
+.scouting-report p,
+.report-metric span,
+.report-metric small,
+.best-uma-stats small {
   color: #8f9bad;
 }
 
-.theme-dark .report-metric {
+.report-metric {
   background: #0b1220;
   border-color: #263244;
 }
 
-.theme-dark .report-metric strong {
+.report-metric strong {
   color: #d1d5db;
 }
 
-.theme-dark .best-uma-stats strong {
+.best-uma-stats strong {
   color: #d1d5db;
 }
 
-.theme-dark .best-uma-stats span {
+.best-uma-stats span {
   background: #0b1220;
   border-color: #263244;
 }
 
-.theme-dark .best-uma-portrait {
+.best-uma-portrait {
   background: #111b2c;
   border-color: #263244;
   color: #8f9bad;
 }
 
-.theme-dark .detail-full .best-uma-stats span {
+.detail-full .best-uma-stats span {
   background: #0d1626;
   border-color: #334155;
 }
 
-.theme-dark .detail-full .best-uma-stats strong {
+.detail-full .best-uma-stats strong {
   color: #f8fafc;
 }
 
-.theme-dark .uma-badge.scoring {
+.uma-badge.scoring {
   background: #102f45;
   border-color: #1c506f;
   color: #7dd3fc;
 }
 
-.theme-dark .uma-badge.winrate {
+.uma-badge.winrate {
   background: #3a2a0a;
   border-color: #6f4f12;
   color: #fbbf24;
 }
 
-.theme-dark .uma-badge.sample {
+.uma-badge.sample {
   background: #123a2a;
   border-color: #1f5e43;
   color: #86efac;
 }
 
-.theme-dark .uma-badge.caution {
+.uma-badge.caution {
   background: #263244;
   border-color: #334155;
   color: #cbd5e1;
 }
 
-.theme-dark .profile-data-status {
+.profile-data-status {
   background: #0b1220;
   border-color: #263244;
   color: #b6c0ce;
 }
 
-.theme-dark .profile-data-status.fresh {
+.profile-data-status.fresh {
   background: #0d241b;
   border-color: #1f5e43;
   color: #86efac;
 }
 
-.theme-dark .profile-data-status.loading {
+.profile-data-status.loading {
   background: #10213c;
   border-color: #234a7c;
   color: #93c5fd;
 }
 
-.theme-dark .profile-data-status.warning {
+.profile-data-status.warning {
   background: #2a1e09;
   border-color: #745017;
   color: #fbbf24;
 }
 
-.theme-dark .recent-matches {
+.recent-matches {
   border-top-color: #263244;
 }
 
-.theme-dark .recent-result.win {
+.recent-result.win {
   background: #123a2a;
   color: #86efac;
 }
 
-.theme-dark .recent-result.loss {
+.recent-result.loss {
   background: #3b151b;
   color: #fca5a5;
 }
 
-.theme-dark .recent-result.pending {
+.recent-result.pending {
   background: #263244;
   color: #cbd5e1;
 }
 
-.theme-dark .recent-match-code {
+.recent-match-code {
   color: #93c5fd;
 }
 
-.theme-dark .recent-uma {
+.recent-uma {
   color: #d1d5db;
 }
 
-.theme-dark .recent-points {
+.recent-points {
   color: #b6c0ce;
 }
 
-.theme-dark .top-umas {
+.top-umas {
   border-top-color: #263244;
 }
 
-.theme-dark .detail-full .best-uma-row {
+.detail-full .best-uma-row {
   border-top-color: #263244;
 }
 
-.theme-dark .player-note {
+.player-note {
   color: #fbbf24;
 }
 
-.theme-light {
-  background: #f7f8fa;
-  color: #17202a;
-}
 
 @media (max-width: 1040px) {
   .surface-scout {

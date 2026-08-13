@@ -21,7 +21,7 @@ const SCOUT_POPOUT_PATH = '/scout.html';
 const CONTENT_SCRIPT_PATH = '/content-scripts/content.js' as ScriptPublicPath;
 const DRAFTER_URL_PATTERN = 'https://drafter.uma.guide/*';
 const SCOUT_POPOUT_WIDTH = 1320;
-const SCOUT_POPOUT_HEIGHT = 1020;
+const SCOUT_POPOUT_HEIGHT = 1100;
 
 let enrichmentRunId = 0;
 let scoutWindowId: number | undefined;
