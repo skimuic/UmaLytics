@@ -1,20 +1,20 @@
 # UmaLytics Beta Testing
 
-UmaLytics is currently distributed as an unpacked browser extension for private testing.
+UmaLytics is currently distributed as an unpacked browser extension for closed beta testing.
 
 ## Packages
 
-- Chrome: `umalytics-chrome-0.1.2-beta.1.zip`
-- Edge: `umalytics-edge-0.1.2-beta.1.zip`
-- Firefox: `umalytics-firefox-0.1.2-beta.1.zip`
-- LibreWolf: `umalytics-librewolf-0.1.2-beta.1.zip`
-- Opera GX: `umalytics-operagx-0.1.2-beta.1.zip`
-- Brave Browser: `umalytics-brave-browser-0.1.2-beta.1.zip`
+- Chrome: `umalytics-chrome-0.1.3-closed-beta.1.zip`
+- Edge: `umalytics-edge-0.1.3-closed-beta.1.zip`
+- Firefox: `umalytics-firefox-0.1.3-closed-beta.1.zip`
+- LibreWolf: `umalytics-librewolf-0.1.3-closed-beta.1.zip`
+- Opera GX: `umalytics-operagx-0.1.3-closed-beta.1.zip`
+- Brave Browser: `umalytics-brave-browser-0.1.3-closed-beta.1.zip`
 
 ## Install
 
 Chrome:
-1. Unzip `umalytics-chrome-0.1.2-beta.1.zip`.
+1. Unzip `umalytics-chrome-0.1.3-closed-beta.1.zip`.
 2. Open `chrome://extensions`.
 3. Turn on Developer mode.
 4. Click Load unpacked.
@@ -22,7 +22,7 @@ Chrome:
 6. Open `https://drafter.uma.guide/`, refresh the page, and click the UmaLytics toolbar icon.
 
 Edge:
-1. Unzip `umalytics-edge-0.1.2-beta.1.zip`.
+1. Unzip `umalytics-edge-0.1.3-closed-beta.1.zip`.
 2. Open `edge://extensions`.
 3. Turn on Developer mode.
 4. Click Load unpacked.
@@ -30,21 +30,21 @@ Edge:
 6. Open `https://drafter.uma.guide/`, refresh the page, and click the UmaLytics toolbar icon.
 
 Firefox:
-1. Unzip `umalytics-firefox-0.1.2-beta.1.zip`.
+1. Unzip `umalytics-firefox-0.1.3-closed-beta.1.zip`.
 2. Open `about:debugging#/runtime/this-firefox`.
 3. Click Load Temporary Add-on.
 4. Select `firefox-mv3/manifest.json`.
 5. Open `https://drafter.uma.guide/`, refresh the page, and click the UmaLytics toolbar icon.
 
 LibreWolf:
-1. Unzip `umalytics-librewolf-0.1.2-beta.1.zip`.
+1. Unzip `umalytics-librewolf-0.1.3-closed-beta.1.zip`.
 2. Open `about:debugging#/runtime/this-firefox`.
 3. Click Load Temporary Add-on.
 4. Select `librewolf-mv3/manifest.json`.
 5. Open `https://drafter.uma.guide/`, refresh the page, and click the UmaLytics toolbar icon.
 
 Opera GX:
-1. Unzip `umalytics-operagx-0.1.2-beta.1.zip`.
+1. Unzip `umalytics-operagx-0.1.3-closed-beta.1.zip`.
 2. Open `opera://extensions`.
 3. Turn on Developer Mode.
 4. Click Load unpacked.
@@ -52,7 +52,7 @@ Opera GX:
 6. Open `https://drafter.uma.guide/`, refresh the page, and click the UmaLytics toolbar icon.
 
 Brave Browser:
-1. Unzip `umalytics-brave-browser-0.1.2-beta.1.zip`.
+1. Unzip `umalytics-brave-browser-0.1.3-closed-beta.1.zip`.
 2. Open `brave://extensions`.
 3. Turn on Developer mode.
 4. Click Load unpacked.

@@ -416,7 +416,7 @@ function normalizeReleaseVariant(variant: string | undefined): string | undefine
     return undefined;
   }
 
-  return variant.toLowerCase() === 'alt' ? undefined : variant;
+  return variant;
 }
 
 function getCardIdString(card: UmaCard): string | undefined {

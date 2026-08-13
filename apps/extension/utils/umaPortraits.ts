@@ -61,8 +61,13 @@ export function normalizeUmaOutfitId(umaId: string): string {
   return UMA_OUTFIT_ID_BY_PORTRAIT_ID.get(umaId) ?? umaId;
 }
 
+export function isKnownUmaOutfitId(umaId: string): boolean {
+  return UMA_RELEASE_ENTRY_BY_OUTFIT_ID.has(umaId);
+}
+
 export function getUmaDisplayName(umaId: string, fallbackName?: string): string {
-  const releaseEntry = UMA_RELEASE_ENTRY_BY_OUTFIT_ID.get(normalizeUmaOutfitId(umaId));
+  const releaseEntry = UMA_RELEASE_ENTRY_BY_OUTFIT_ID.get(umaId)
+    ?? UMA_RELEASE_ENTRY_BY_OUTFIT_ID.get(normalizeUmaOutfitId(umaId));
 
   if (releaseEntry === undefined) {
     return fallbackName ?? umaId;
@@ -70,7 +75,7 @@ export function getUmaDisplayName(umaId: string, fallbackName?: string): string 
 
   const variant = releaseEntry.variant.trim();
 
-  if (variant.length === 0 || variant.toLowerCase() === 'alt') {
+  if (variant.length === 0) {
     return releaseEntry.name;
   }
 

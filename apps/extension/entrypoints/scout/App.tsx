@@ -36,6 +36,7 @@ import { releaseOrder } from '../../utils/umaReleaseOrder';
 import {
   getUmaDisplayName,
   getUmaPortraitUrl,
+  isKnownUmaOutfitId,
   isHashedUmaAssetUrl,
   normalizeUmaOutfitId
 } from '../../utils/umaPortraits';
@@ -1773,7 +1774,7 @@ function getUmaCatalogOptions(
   const catalog = new Map<string, UmaCatalogOption>();
 
   releaseOrder.forEach((entry, index) => {
-    const umaId = normalizeUmaOutfitId(entry.outfitId);
+    const umaId = entry.outfitId;
 
     catalog.set(umaId, {
       umaId,
@@ -1826,7 +1827,7 @@ function sortUmaCatalogOptions(catalog: UmaCatalogOption[]): UmaCatalogOption[] 
 }
 
 function getUmaCatalogKey(umaId: string | undefined, name: string): string {
-  return umaId === undefined ? normalizeSearchText(name) : normalizeUmaOutfitId(umaId);
+  return umaId === undefined ? normalizeSearchText(name) : umaId;
 }
 
 function filterUmaCatalogOptions(
@@ -1907,12 +1908,24 @@ function findScopedUmaEntry(
   const umas = scopedStats?.allUmas ?? profile?.allUmas ?? [];
 
   if (action.umaId !== undefined) {
-    const normalizedUmaId = normalizeUmaOutfitId(action.umaId);
-    const exactMatch = umas.find((uma) => normalizeUmaOutfitId(uma.umaId) === normalizedUmaId);
+    const exactMatch = umas.find((uma) => uma.umaId === action.umaId);
 
     if (exactMatch !== undefined) {
       return exactMatch;
     }
+
+    if (!isKnownUmaOutfitId(action.umaId)) {
+      const normalizedUmaId = normalizeUmaOutfitId(action.umaId);
+      const normalizedMatch = normalizedUmaId === action.umaId
+        ? undefined
+        : umas.find((uma) => uma.umaId === normalizedUmaId);
+
+      if (normalizedMatch !== undefined) {
+        return normalizedMatch;
+      }
+    }
+
+    return undefined;
   }
 
   const normalizedActionName = normalizeUmaNameForLookup(action.name);
