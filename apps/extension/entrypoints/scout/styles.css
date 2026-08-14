@@ -723,33 +723,9 @@ body {
 
 .uma-planner-scene {
   display: grid;
-  gap: 14px;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
-}
-
-.uma-planner-header {
-  align-items: center;
-  background: #ffffff;
-  border: 1px solid #d9e0ea;
-  border-radius: 8px;
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
-  padding: 16px 18px;
-}
-
-.uma-planner-header h2 {
-  font-size: 20px;
-  line-height: 1.15;
-  margin: 0;
-}
-
-.uma-planner-header p {
-  color: #64748b;
-  font-size: 12px;
-  margin: 4px 0 0;
 }
 
 .uma-search,
@@ -855,7 +831,7 @@ body {
 .uma-planner-layout {
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(0, 0.66fr) minmax(300px, 0.34fr);
+  grid-template-columns: minmax(0, 0.6fr) minmax(420px, 0.4fr);
   min-height: 0;
   overflow: hidden;
 }
@@ -922,8 +898,8 @@ body {
 .uma-catalog-grid {
   align-content: start;
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
   min-height: 0;
   overflow: auto;
   padding-right: 6px;
@@ -983,12 +959,12 @@ body {
   color: inherit;
   cursor: pointer;
   display: grid;
-  grid-template-rows: 52px 40px;
-  gap: 5px;
+  grid-template-rows: 66px 42px;
+  gap: 7px;
   justify-items: center;
   min-width: 0;
-  min-height: 106px;
-  padding: 7px 5px;
+  min-height: 126px;
+  padding: 9px 6px;
   position: relative;
 }
 
@@ -1016,11 +992,11 @@ body {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   display: inline-flex;
-  height: 48px;
+  height: 62px;
   justify-content: center;
   overflow: visible;
   position: relative;
-  width: 48px;
+  width: 62px;
 }
 
 .uma-catalog-portrait img {
@@ -1059,11 +1035,11 @@ body {
 .uma-catalog-name {
   align-self: start;
   display: -webkit-box;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 900;
-  line-height: 12px;
+  line-height: 13px;
   max-width: 100%;
-  min-height: 36px;
+  min-height: 39px;
   overflow: hidden;
   overflow-wrap: anywhere;
   text-align: center;
@@ -1072,9 +1048,10 @@ body {
 }
 
 .uma-planning-panel {
+  align-content: start;
   display: grid;
-  gap: 12px;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 14px;
+  grid-template-rows: auto auto;
   padding: 16px;
 }
 
@@ -1089,8 +1066,8 @@ body {
   border: 1px solid #e6ebf2;
   border-radius: 8px;
   display: grid;
-  gap: 14px;
-  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 16px;
+  grid-template-columns: 76px minmax(180px, 0.7fr) minmax(0, 1.3fr);
   padding: 14px;
 }
 
@@ -1134,54 +1111,52 @@ body {
 
 .uma-planning-summary {
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  min-width: 0;
 }
 
 .uma-planning-summary span {
   background: #f8fafc;
   border: 1px solid #e6ebf2;
   border-radius: 8px;
+  align-content: center;
   display: grid;
-  gap: 3px;
+  gap: 5px;
+  min-height: 54px;
   min-width: 0;
-  padding: 10px 12px;
-}
-
-.uma-planning-summary strong,
-.uma-planning-summary small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 9px 12px;
 }
 
 .uma-planning-summary strong {
   color: #17202a;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .uma-planning-summary small {
   color: #64748b;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.03em;
-  line-height: 1;
+  line-height: 1.15;
   text-transform: uppercase;
 }
 
 .uma-planning-team-grid {
+  align-content: start;
   display: grid;
   gap: 12px;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, auto);
   min-height: 0;
 }
 
 .uma-planning-team {
   display: grid;
   gap: 10px;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
   min-height: 0;
   padding: 13px;
 }
@@ -1221,23 +1196,21 @@ body {
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-template-rows: minmax(78px, 1fr);
   list-style: none;
   margin: 0;
-  min-height: 78px;
   padding: 0;
 }
 
 .uma-planning-player {
-  align-content: center;
+  align-content: start;
   background: #f8fafc;
   border: 1px solid #e6ebf2;
   border-radius: 8px;
   display: grid;
   gap: 4px;
-  min-height: 78px;
+  min-height: 92px;
   min-width: 0;
-  padding: 9px 10px;
+  padding: 12px 10px;
 }
 
 .uma-planning-player:not(.empty):not(.no-history) {
@@ -2321,7 +2294,6 @@ a.player-name:hover {
 .draft-team-panel,
 .draft-map-list li,
 .draft-uma-row,
-.uma-planner-header,
 .uma-catalog-panel,
 .uma-catalog-button,
 .uma-planning-panel,
@@ -2472,7 +2444,6 @@ a.player-name:hover {
 .draft-uma-copy strong,
 .draft-pick-experience-heading strong,
 .draft-pick-experience-list strong,
-.uma-planner-header h2,
 .uma-catalog-heading strong,
 .uma-catalog-empty strong,
 .uma-catalog-name,
@@ -2488,7 +2459,6 @@ a.player-name:hover {
   color: #d1d5db;
 }
 
-.uma-planner-header p,
 .uma-search span,
 .uma-sort > span,
 .uma-catalog-heading span,
@@ -2830,6 +2800,14 @@ a.player-name:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .uma-planning-heading {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  .uma-planning-summary {
+    grid-column: 1 / -1;
+  }
+
   .uma-planning-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2906,7 +2884,6 @@ a.player-name:hover {
     grid-template-rows: repeat(5, minmax(0, 1fr));
   }
 
-  .uma-planner-header,
   .uma-planning-team header {
     align-items: flex-start;
     display: grid;

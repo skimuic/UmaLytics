@@ -439,13 +439,6 @@ function UmaPlannerScene({
 
   return (
     <section className="uma-planner-scene" aria-label="Uma planner">
-      <header className="uma-planner-header">
-        <div>
-          <h2>Uma Planner</h2>
-          <p>Full Uma catalog - {formatStatsScopeShortLabel(statsScope)} lobby history</p>
-        </div>
-      </header>
-
       <div className="uma-planner-layout">
         <UmaPlanningPanel
           selectedUma={selectedUma}
@@ -646,24 +639,24 @@ function UmaPlanningPanel({
             {totalExperience} {totalExperience === 1 ? 'player' : 'players'} with {scopeLabel} history
           </p>
         </div>
-      </header>
 
-      <div className="uma-planning-summary" aria-label={`${selectedUma.name} lobby history summary`}>
-        <span>
-          <strong>{totalExperience}/{roster.players.length}</strong>
-          <small>Lobby players</small>
-        </span>
-        {teamSummaries.map((team) => (
-          <span key={team.id}>
-            <strong>{team.historyCount}/{team.playerCount}</strong>
-            <small>{team.name}</small>
+        <div className="uma-planning-summary" aria-label={`${selectedUma.name} lobby history summary`}>
+          <span>
+            <strong>{totalExperience}/{roster.players.length}</strong>
+            <small>Lobby players</small>
           </span>
-        ))}
-        <span>
-          <strong>{scopeLabel}</strong>
-          <small>Stat scope</small>
-        </span>
-      </div>
+          {teamSummaries.map((team) => (
+            <span key={team.id}>
+              <strong>{team.historyCount}/{team.playerCount}</strong>
+              <small>{team.name}</small>
+            </span>
+          ))}
+          <span>
+            <strong>{scopeLabel}</strong>
+            <small>Stat scope</small>
+          </span>
+        </div>
+      </header>
 
       <div className="uma-planning-team-grid">
         {TEAM_IDS.map((teamId) => (
