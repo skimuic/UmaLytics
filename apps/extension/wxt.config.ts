@@ -7,8 +7,20 @@ export default defineConfig({
     version: '0.1.3',
     version_name: '0.1.3-closed-beta.1',
     description: 'Prematch scouting companion for Uma Drafter.',
+    icons: {
+      16: 'icon/16.png',
+      32: 'icon/32.png',
+      48: 'icon/48.png',
+      128: 'icon/128.png'
+    },
     action: {
-      default_title: 'Open UmaLytics Scout'
+      default_title: 'Open UmaLytics Scout',
+      default_icon: {
+        16: 'icon/16.png',
+        32: 'icon/32.png',
+        48: 'icon/48.png',
+        128: 'icon/128.png'
+      }
     },
     permissions: ['storage', 'scripting'],
     host_permissions: ['https://drafter-api.uma.guide/*', 'https://drafter.uma.guide/*'],

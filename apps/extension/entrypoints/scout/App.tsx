@@ -56,6 +56,8 @@ type AppScene = 'lobby' | 'draft' | 'umas';
 type NotableBadgeTone = 'rank' | 'scoring' | 'sample' | 'private';
 type UmaBadgeTone = 'scoring' | 'winrate' | 'sample' | 'caution';
 type SampleConfidence = 'small' | 'steady' | 'proven';
+type UmaCatalogSortMode = 'releaseOrder' | 'lobbyHits' | 'alphabetical';
+type UmaCatalogSortOption = { value: UmaCatalogSortMode; label: string };
 
 interface NotableBadge {
   label: string;
@@ -93,6 +95,13 @@ interface UmaCatalogOption {
   imageUrl: string | undefined;
   order: number | undefined;
 }
+
+const DEFAULT_UMA_CATALOG_SORT_OPTION: UmaCatalogSortOption = { value: 'releaseOrder', label: 'Release order' };
+const UMA_CATALOG_SORT_OPTIONS: UmaCatalogSortOption[] = [
+  DEFAULT_UMA_CATALOG_SORT_OPTION,
+  { value: 'lobbyHits', label: 'Lobby hits' },
+  { value: 'alphabetical', label: 'Alphabetical' }
+];
 
 export default function App() {
   const [roster, setRoster] = useState<PrematchRoster | undefined>();
@@ -396,16 +405,21 @@ function UmaPlannerScene({
   statsScope: PlayerStatsScope;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortMode, setSortMode] = useState<UmaCatalogSortMode>('releaseOrder');
   const catalog = useMemo(() => getUmaCatalogOptions(profiles, statsScope), [profiles, statsScope]);
-  const filteredCatalog = useMemo(
-    () => filterUmaCatalogOptions(catalog, searchQuery),
-    [catalog, searchQuery]
-  );
-  const [selectedUmaId, setSelectedUmaId] = useState<string | undefined>();
-  const selectedUma = filteredCatalog.find((uma) => uma.umaId === selectedUmaId) ?? filteredCatalog[0];
   const historyCounts = useMemo(
     () => getUmaHistoryCounts(catalog, roster.players, profiles, statsScope),
     [catalog, profiles, roster.players, statsScope]
+  );
+  const filteredCatalog = useMemo(
+    () => sortUmaCatalogOptions(filterUmaCatalogOptions(catalog, searchQuery), sortMode, historyCounts),
+    [catalog, historyCounts, searchQuery, sortMode]
+  );
+  const [selectedUmaId, setSelectedUmaId] = useState<string | undefined>();
+  const selectedUma = filteredCatalog.find((uma) => uma.umaId === selectedUmaId) ?? filteredCatalog[0];
+  const lobbyHitTotal = useMemo(
+    () => Array.from(historyCounts.values()).filter((count) => count > 0).length,
+    [historyCounts]
   );
 
   useEffect(() => {
@@ -430,17 +444,6 @@ function UmaPlannerScene({
           <h2>Uma Planner</h2>
           <p>Full Uma catalog - {formatStatsScopeShortLabel(statsScope)} lobby history</p>
         </div>
-        <label className="uma-search">
-          <span>Search Umas</span>
-          <input
-            type="search"
-            value={searchQuery}
-            placeholder="Search by Uma name"
-            onChange={(event) => {
-              setSearchQuery(event.currentTarget.value);
-            }}
-          />
-        </label>
       </header>
 
       <div className="uma-planner-layout">
@@ -452,9 +455,30 @@ function UmaPlannerScene({
         />
 
         <section className="uma-catalog-panel" aria-label="Uma catalog">
-          <div className="uma-catalog-summary">
-            <strong>{filteredCatalog.length}</strong>
-            <span>{searchQuery.trim().length === 0 ? 'Uma Catalog' : 'matching Umas'}</span>
+          <div className="uma-catalog-toolbar">
+            <div className="uma-catalog-heading">
+              <strong>Uma Catalog</strong>
+              <span>
+                {filteredCatalog.length} {searchQuery.trim().length === 0 ? 'Umas' : 'matches'} - {lobbyHitTotal} lobby hits
+              </span>
+            </div>
+            <div className="uma-catalog-controls">
+              <label className="uma-search">
+                <span>Search</span>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  placeholder="Search Umas"
+                  onChange={(event) => {
+                    setSearchQuery(event.currentTarget.value);
+                  }}
+                />
+              </label>
+              <div className="uma-sort">
+                <span>Sort</span>
+                <UmaCatalogSortMenu value={sortMode} onChange={setSortMode} />
+              </div>
+            </div>
           </div>
           {filteredCatalog.length === 0 ? (
             <div className="uma-catalog-empty">
@@ -477,6 +501,68 @@ function UmaPlannerScene({
         </section>
       </div>
     </section>
+  );
+}
+
+function UmaCatalogSortMenu({
+  value,
+  onChange
+}: {
+  value: UmaCatalogSortMode;
+  onChange: (value: UmaCatalogSortMode) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOption = UMA_CATALOG_SORT_OPTIONS.find((option) => option.value === value)
+    ?? DEFAULT_UMA_CATALOG_SORT_OPTION;
+
+  return (
+    <div
+      className={isOpen ? 'uma-sort-menu open' : 'uma-sort-menu'}
+      onBlur={(event) => {
+        const nextFocusedElement = event.relatedTarget instanceof Node ? event.relatedTarget : null;
+
+        if (!event.currentTarget.contains(nextFocusedElement)) {
+          setIsOpen(false);
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          setIsOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        className="uma-sort-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => {
+          setIsOpen((current) => !current);
+        }}
+      >
+        <span>{selectedOption.label}</span>
+        <span className="uma-sort-chevron" aria-hidden="true" />
+      </button>
+      {isOpen ? (
+        <div className="uma-sort-options" role="listbox" aria-label="Sort Uma catalog">
+          {UMA_CATALOG_SORT_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={option.value === value ? 'selected' : ''}
+              role="option"
+              aria-selected={option.value === value}
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -1803,27 +1889,51 @@ function getUmaCatalogOptions(
     }
   }
 
-  return sortUmaCatalogOptions(Array.from(catalog.values()));
+  return Array.from(catalog.values());
 }
 
-function sortUmaCatalogOptions(catalog: UmaCatalogOption[]): UmaCatalogOption[] {
-  return catalog.sort((left, right) => {
-    const leftOrder = left.order ?? Number.NEGATIVE_INFINITY;
-    const rightOrder = right.order ?? Number.NEGATIVE_INFINITY;
-    const orderDelta = rightOrder - leftOrder;
+function sortUmaCatalogOptions(
+  catalog: UmaCatalogOption[],
+  sortMode: UmaCatalogSortMode,
+  historyCounts: Map<string, number>
+): UmaCatalogOption[] {
+  return [...catalog].sort((left, right) => {
+    if (sortMode === 'lobbyHits') {
+      const hitDelta = (historyCounts.get(right.umaId) ?? 0) - (historyCounts.get(left.umaId) ?? 0);
 
-    if (orderDelta !== 0) {
-      return orderDelta;
+      if (hitDelta !== 0) {
+        return hitDelta;
+      }
     }
 
-    const nameDelta = left.name.localeCompare(right.name);
-
-    if (nameDelta !== 0) {
-      return nameDelta;
+    if (sortMode === 'alphabetical') {
+      return compareUmaByName(left, right);
     }
 
-    return left.umaId.localeCompare(right.umaId);
+    return compareUmaByReleaseOrder(left, right);
   });
+}
+
+function compareUmaByReleaseOrder(left: UmaCatalogOption, right: UmaCatalogOption): number {
+  const leftOrder = left.order ?? Number.NEGATIVE_INFINITY;
+  const rightOrder = right.order ?? Number.NEGATIVE_INFINITY;
+  const orderDelta = rightOrder - leftOrder;
+
+  if (orderDelta !== 0) {
+    return orderDelta;
+  }
+
+  return compareUmaByName(left, right);
+}
+
+function compareUmaByName(left: UmaCatalogOption, right: UmaCatalogOption): number {
+  const nameDelta = left.name.localeCompare(right.name);
+
+  if (nameDelta !== 0) {
+    return nameDelta;
+  }
+
+  return left.umaId.localeCompare(right.umaId);
 }
 
 function getUmaCatalogKey(umaId: string | undefined, name: string): string {

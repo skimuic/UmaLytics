@@ -737,7 +737,7 @@ body {
   display: flex;
   gap: 16px;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 16px 18px;
 }
 
 .uma-planner-header h2 {
@@ -752,13 +752,15 @@ body {
   margin: 4px 0 0;
 }
 
-.uma-search {
+.uma-search,
+.uma-sort {
   display: grid;
   gap: 5px;
-  min-width: 260px;
+  min-width: 0;
 }
 
-.uma-search span {
+.uma-search span,
+.uma-sort > span {
   color: #64748b;
   font-size: 10px;
   font-weight: 900;
@@ -767,7 +769,8 @@ body {
   text-transform: uppercase;
 }
 
-.uma-search input {
+.uma-search input,
+.uma-sort-trigger {
   background: #f8fafc;
   border: 1px solid #d9e0ea;
   border-radius: 8px;
@@ -780,7 +783,71 @@ body {
   padding: 0 11px;
 }
 
-.uma-search input:focus {
+.uma-sort-menu {
+  position: relative;
+}
+
+.uma-sort-trigger {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  padding-right: 30px;
+  position: relative;
+  text-align: left;
+  width: 100%;
+}
+
+.uma-sort-chevron {
+  border-bottom: 2px solid #7dd3fc;
+  border-right: 2px solid #7dd3fc;
+  height: 7px;
+  position: absolute;
+  right: 13px;
+  top: 12px;
+  transform: rotate(45deg);
+  width: 7px;
+}
+
+.uma-sort-options {
+  background: #0b1220;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+  display: grid;
+  left: 0;
+  overflow: hidden;
+  padding: 4px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+}
+
+.uma-sort-options button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #dbe7f7;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 32px;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.uma-sort-options button:hover,
+.uma-sort-options button:focus,
+.uma-sort-options button.selected {
+  background: #1f2a3a;
+  color: #7dd3fc;
+  outline: none;
+}
+
+.uma-search input:focus,
+.uma-sort-trigger:focus {
   border-color: #38bdf8;
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.18);
 }
@@ -804,31 +871,52 @@ body {
 
 .uma-catalog-panel {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
   padding: 10px;
 }
 
-.uma-catalog-summary {
-  align-items: baseline;
-  border-bottom: 1px solid #d9e0ea;
-  color: #64748b;
-  display: flex;
-  gap: 6px;
-  padding-bottom: 8px;
+.uma-catalog-toolbar {
+  background: #f8fafc;
+  border: 1px solid #e6ebf2;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 11px;
 }
 
-.uma-catalog-summary strong {
+.uma-catalog-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.uma-catalog-heading strong {
   color: #17202a;
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1;
 }
 
-.uma-catalog-summary span {
+.uma-catalog-heading span {
+  color: #64748b;
   font-size: 12px;
   font-weight: 800;
+  line-height: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uma-catalog-controls {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(142px, 0.42fr);
+  min-width: 0;
 }
 
 .uma-catalog-grid {
@@ -2276,12 +2364,29 @@ a.player-name:hover {
 }
 
 .uma-search input,
+.uma-sort-trigger,
+.uma-catalog-toolbar,
 .uma-catalog-empty,
 .uma-catalog-button,
 .uma-planning-player {
   background: #0b1220;
   border-color: #263244;
   color: #dbe7f7;
+}
+
+.uma-sort-trigger {
+  background-color: #111827;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #7dd3fc 50%),
+    linear-gradient(135deg, #7dd3fc 50%, transparent 50%),
+    linear-gradient(180deg, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0));
+  background-position:
+    calc(100% - 15px) 15px,
+    calc(100% - 10px) 15px,
+    0 0;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px, 100% 100%;
+  border-color: #334155;
 }
 
 .uma-planning-player:not(.empty):not(.no-history) {
@@ -2368,8 +2473,8 @@ a.player-name:hover {
 .draft-pick-experience-heading strong,
 .draft-pick-experience-list strong,
 .uma-planner-header h2,
+.uma-catalog-heading strong,
 .uma-catalog-empty strong,
-.uma-catalog-summary strong,
 .uma-catalog-name,
 .uma-planning-heading h3,
 .uma-planning-summary strong,
@@ -2385,8 +2490,9 @@ a.player-name:hover {
 
 .uma-planner-header p,
 .uma-search span,
+.uma-sort > span,
+.uma-catalog-heading span,
 .uma-catalog-empty span,
-.uma-catalog-summary,
 .uma-planning-heading p,
 .uma-planning-summary small,
 .uma-planning-team p,
@@ -2804,6 +2910,17 @@ a.player-name:hover {
   .uma-planning-team header {
     align-items: flex-start;
     display: grid;
+  }
+
+  .uma-catalog-heading,
+  .uma-catalog-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .uma-catalog-heading {
+    align-items: start;
+    display: grid;
+    gap: 4px;
   }
 
   .uma-search {
