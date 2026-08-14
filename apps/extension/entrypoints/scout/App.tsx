@@ -47,6 +47,7 @@ const DRAFT_MAP_SLOT_COUNT = 4;
 const DRAFT_PICK_SLOT_COUNT = 6;
 const DRAFT_BAN_SLOT_COUNT = 2;
 const DRAFT_VETO_SLOT_COUNT = 1;
+const DRAFT_PLAN_PIN_LIMIT = 12;
 const DRAFT_DETAIL_SEPARATOR = ' \u2022 ';
 const STATS_SCOPE_STORAGE_KEY = 'statsScope';
 const ACTIVE_CLOCK_REFRESH_MS = 1_000;
@@ -57,7 +58,9 @@ type NotableBadgeTone = 'rank' | 'scoring' | 'sample' | 'private';
 type UmaBadgeTone = 'scoring' | 'winrate' | 'sample' | 'caution';
 type SampleConfidence = 'small' | 'steady' | 'proven';
 type UmaCatalogSortMode = 'releaseOrder' | 'lobbyHits' | 'alphabetical';
+type UmaCatalogHitScope = 'all' | TeamId;
 type UmaCatalogSortOption = { value: UmaCatalogSortMode; label: string };
+type UmaCatalogHitScopeOption = { value: UmaCatalogHitScope; label: string };
 
 interface NotableBadge {
   label: string;
@@ -96,11 +99,16 @@ interface UmaCatalogOption {
   order: number | undefined;
 }
 
-const DEFAULT_UMA_CATALOG_SORT_OPTION: UmaCatalogSortOption = { value: 'releaseOrder', label: 'Release order' };
+const DEFAULT_UMA_CATALOG_SORT_OPTION: UmaCatalogSortOption = { value: 'lobbyHits', label: 'Total hits' };
 const UMA_CATALOG_SORT_OPTIONS: UmaCatalogSortOption[] = [
   DEFAULT_UMA_CATALOG_SORT_OPTION,
-  { value: 'lobbyHits', label: 'Lobby hits' },
+  { value: 'releaseOrder', label: 'Release order' },
   { value: 'alphabetical', label: 'Alphabetical' }
+];
+const UMA_CATALOG_HIT_SCOPE_OPTIONS: UmaCatalogHitScopeOption[] = [
+  { value: 'all', label: 'All' },
+  { value: 'team1', label: 'Team 1' },
+  { value: 'team2', label: 'Team 2' }
 ];
 
 export default function App() {
@@ -141,8 +149,8 @@ export default function App() {
 
       const profileChange = changes[PLAYER_PROFILE_SUMMARIES_STORAGE_KEY];
 
-      if (isProfileSnapshot(profileChange?.newValue)) {
-        setProfileSnapshot(profileChange.newValue);
+      if (profileChange !== undefined) {
+        setProfileSnapshot(isProfileSnapshot(profileChange.newValue) ? profileChange.newValue : undefined);
       }
     };
 
@@ -176,8 +184,7 @@ export default function App() {
   const hasRoster = roster !== undefined;
   const refreshCooldownMs = getRefreshCooldownMs(profileSnapshot?.updatedAt, now);
   const canRefresh = hasRoster && loadingProfiles === 0 && refreshCooldownMs === 0;
-  const profileStatusLabel = getProfileSnapshotStatus(profileSnapshot, loadingProfiles, now);
-  const statsScopeLabel = getStatsScopeDescription(statsScope);
+  const profileStatusLabel = hasRoster ? getProfileSnapshotStatus(profileSnapshot, loadingProfiles, now) : undefined;
 
   useEffect(() => {
     if (selectedPlayerKey !== undefined && selectedPlayerContext === undefined) {
@@ -195,7 +202,13 @@ export default function App() {
       return;
     }
 
-    void sendProfileRefreshRequest(roster);
+    void sendLobbyReconnectRequest().then((result) => {
+      if (result?.activeLobby !== true || result.matchCode !== roster.matchCode) {
+        return;
+      }
+
+      void sendProfileRefreshRequest(roster);
+    });
   };
 
   return (
@@ -203,10 +216,17 @@ export default function App() {
       <header className="app-header">
         <div>
           <h1>UmaLytics</h1>
-          <p>{roster?.matchCode === undefined ? 'Lobby scouting' : `Match ${roster.matchCode}`}</p>
-          <p className="stats-scope-description" title={getStatsScopeTooltip(statsScope)}>
-            {statsScopeLabel}
+          <p className="app-credits">
+            UmaLytics by{' '}
+            <a href="https://github.com/skimuic/UmaLytics" target="_blank" rel="noreferrer">
+              k.juno
+            </a>
+            {' '} - Uma Drafter by{' '}
+            <a href="https://drafter.uma.guide" target="_blank" rel="noreferrer">
+              Terumi
+            </a>
           </p>
+          <p>{roster?.matchCode === undefined ? 'Lobby scouting' : `Match ${roster.matchCode}`}</p>
           {profileStatusLabel === undefined ? null : (
             <p className="profile-freshness">{profileStatusLabel}</p>
           )}
@@ -376,7 +396,7 @@ function DraftScene({
           )}
         </div>
         <span title={`Uma experience checks each team's loaded ${scopeLabel} ranked Uma history.`}>
-          Using team {statsScope === 'currentSeason' ? 'seasonal' : 'all-time'} history
+          Using team {formatStatsScopeShortLabel(statsScope)} history
         </span>
       </header>
 
@@ -405,11 +425,17 @@ function UmaPlannerScene({
   statsScope: PlayerStatsScope;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortMode, setSortMode] = useState<UmaCatalogSortMode>('releaseOrder');
+  const [sortMode, setSortMode] = useState<UmaCatalogSortMode>('lobbyHits');
+  const [hitScope, setHitScope] = useState<UmaCatalogHitScope>('all');
+  const [pinnedUmaIds, setPinnedUmaIds] = useState<string[]>([]);
   const catalog = useMemo(() => getUmaCatalogOptions(profiles, statsScope), [profiles, statsScope]);
+  const hitScopePlayers = useMemo(
+    () => getRosterPlayersForHitScope(roster, hitScope),
+    [hitScope, roster]
+  );
   const historyCounts = useMemo(
-    () => getUmaHistoryCounts(catalog, roster.players, profiles, statsScope),
-    [catalog, profiles, roster.players, statsScope]
+    () => getUmaHistoryCounts(catalog, hitScopePlayers, profiles, statsScope),
+    [catalog, hitScopePlayers, profiles, statsScope]
   );
   const filteredCatalog = useMemo(
     () => sortUmaCatalogOptions(filterUmaCatalogOptions(catalog, searchQuery), sortMode, historyCounts),
@@ -420,6 +446,13 @@ function UmaPlannerScene({
   const lobbyHitTotal = useMemo(
     () => Array.from(historyCounts.values()).filter((count) => count > 0).length,
     [historyCounts]
+  );
+  const hitScopeLabel = getHitScopeLabel(hitScope);
+  const pinnedUmas = useMemo(
+    () => pinnedUmaIds
+      .map((umaId) => catalog.find((uma) => uma.umaId === umaId))
+      .filter((uma): uma is UmaCatalogOption => uma !== undefined),
+    [catalog, pinnedUmaIds]
   );
 
   useEffect(() => {
@@ -445,6 +478,20 @@ function UmaPlannerScene({
           roster={roster}
           profiles={profiles}
           statsScope={statsScope}
+          pinnedUmas={pinnedUmas}
+          onPinUma={(umaId) => {
+            setPinnedUmaIds((current) => {
+              if (current.includes(umaId)) {
+                return current;
+              }
+
+              return [umaId, ...current].slice(0, DRAFT_PLAN_PIN_LIMIT);
+            });
+          }}
+          onRemovePinnedUma={(umaId) => {
+            setPinnedUmaIds((current) => current.filter((pinnedUmaId) => pinnedUmaId !== umaId));
+          }}
+          onSelectUma={setSelectedUmaId}
         />
 
         <section className="uma-catalog-panel" aria-label="Uma catalog">
@@ -452,12 +499,11 @@ function UmaPlannerScene({
             <div className="uma-catalog-heading">
               <strong>Uma Catalog</strong>
               <span>
-                {filteredCatalog.length} {searchQuery.trim().length === 0 ? 'Umas' : 'matches'} - {lobbyHitTotal} lobby hits
+                {filteredCatalog.length} {searchQuery.trim().length === 0 ? 'Umas' : 'matches'} - {lobbyHitTotal} {hitScopeLabel} hits
               </span>
             </div>
             <div className="uma-catalog-controls">
-              <label className="uma-search">
-                <span>Search</span>
+              <label className="uma-search" aria-label="Search Umas">
                 <input
                   type="search"
                   value={searchQuery}
@@ -467,9 +513,24 @@ function UmaPlannerScene({
                   }}
                 />
               </label>
-              <div className="uma-sort">
-                <span>Sort</span>
+              <div className="uma-sort" aria-label="Sort Uma catalog">
                 <UmaCatalogSortMenu value={sortMode} onChange={setSortMode} />
+              </div>
+              <div className="uma-hit-scope" aria-label="Catalog hit scope">
+                <div className="uma-hit-scope-toggle">
+                  {UMA_CATALOG_HIT_SCOPE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={option.value === hitScope ? 'active' : ''}
+                      onClick={() => {
+                        setHitScope(option.value);
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -593,12 +654,20 @@ function UmaPlanningPanel({
   selectedUma,
   roster,
   profiles,
-  statsScope
+  statsScope,
+  pinnedUmas,
+  onPinUma,
+  onRemovePinnedUma,
+  onSelectUma
 }: {
   selectedUma: UmaCatalogOption | undefined;
   roster: PrematchRoster;
   profiles: Record<string, PlayerProfileSummary>;
   statsScope: PlayerStatsScope;
+  pinnedUmas: UmaCatalogOption[];
+  onPinUma: (umaId: string) => void;
+  onRemovePinnedUma: (umaId: string) => void;
+  onSelectUma: (umaId: string) => void;
 }) {
   if (selectedUma === undefined) {
     return (
@@ -612,6 +681,7 @@ function UmaPlanningPanel({
   const teams = getTeamGroups(roster);
   const totalExperience = getUmaExperience(action, roster.players, profiles, statsScope).length;
   const scopeLabel = formatStatsScopeShortLabel(statsScope);
+  const isPinned = pinnedUmas.some((uma) => uma.umaId === selectedUma.umaId);
   const teamSummaries = TEAM_IDS.map((teamId) => {
     const team = teams.find((team) => team.id === teamId);
     const players = team?.players ?? [];
@@ -633,11 +703,21 @@ function UmaPlanningPanel({
         <span className="uma-planning-portrait">
           <UmaImage imageUrl={selectedUma.imageUrl} name={selectedUma.name} loading="eager" />
         </span>
-        <div>
+        <div className="uma-planning-title">
           <h3>{selectedUma.name}</h3>
           <p>
             {totalExperience} {totalExperience === 1 ? 'player' : 'players'} with {scopeLabel} history
           </p>
+          <button
+            type="button"
+            className={isPinned ? 'uma-pin-button pinned' : 'uma-pin-button'}
+            disabled={isPinned}
+            onClick={() => {
+              onPinUma(selectedUma.umaId);
+            }}
+          >
+            {isPinned ? 'Pinned' : 'Pin to plan'}
+          </button>
         </div>
 
         <div className="uma-planning-summary" aria-label={`${selectedUma.name} lobby history summary`}>
@@ -645,16 +725,16 @@ function UmaPlanningPanel({
             <strong>{totalExperience}/{roster.players.length}</strong>
             <small>Lobby players</small>
           </span>
+          <span>
+            <strong>{scopeLabel}</strong>
+            <small>Stat scope</small>
+          </span>
           {teamSummaries.map((team) => (
             <span key={team.id}>
               <strong>{team.historyCount}/{team.playerCount}</strong>
               <small>{team.name}</small>
             </span>
           ))}
-          <span>
-            <strong>{scopeLabel}</strong>
-            <small>Stat scope</small>
-          </span>
         </div>
       </header>
 
@@ -670,6 +750,107 @@ function UmaPlanningPanel({
           />
         ))}
       </div>
+
+      <DraftPlanTray
+        pinnedUmas={pinnedUmas}
+        roster={roster}
+        profiles={profiles}
+        statsScope={statsScope}
+        selectedUmaId={selectedUma.umaId}
+        onSelectUma={onSelectUma}
+        onRemoveUma={onRemovePinnedUma}
+      />
+    </section>
+  );
+}
+
+function DraftPlanTray({
+  pinnedUmas,
+  roster,
+  profiles,
+  statsScope,
+  selectedUmaId,
+  onSelectUma,
+  onRemoveUma
+}: {
+  pinnedUmas: UmaCatalogOption[];
+  roster: PrematchRoster;
+  profiles: Record<string, PlayerProfileSummary>;
+  statsScope: PlayerStatsScope;
+  selectedUmaId: string;
+  onSelectUma: (umaId: string) => void;
+  onRemoveUma: (umaId: string) => void;
+}) {
+  const teams = getTeamGroups(roster);
+  const scopeLabel = formatStatsScopeShortLabel(statsScope);
+
+  return (
+    <section className="draft-plan-tray" aria-label="Draft plan">
+      <header>
+        <div>
+          <h4>Draft Plan</h4>
+          <p>Pinned Umas for this lobby</p>
+        </div>
+        <span>
+          {pinnedUmas.length}/{DRAFT_PLAN_PIN_LIMIT}
+        </span>
+      </header>
+      {pinnedUmas.length === 0 ? (
+        <div className="draft-plan-empty">Pin Umas from the catalog to build a short plan.</div>
+      ) : (
+        <div className="draft-plan-list">
+          {pinnedUmas.map((uma) => {
+            const action = getUmaCatalogAction(uma);
+            const totalExperience = getUmaExperience(action, roster.players, profiles, statsScope).length;
+            const teamSummaries = TEAM_IDS.map((teamId) => {
+              const team = teams.find((team) => team.id === teamId);
+              const players = team?.players ?? [];
+              const historyCount = players.filter((player) =>
+                findScopedUmaEntry(action, profiles[player.discordId], statsScope) !== undefined
+              ).length;
+
+              return `${teamId === 'team1' ? 'T1' : 'T2'} ${historyCount}/${players.length}`;
+            });
+
+            return (
+              <article
+                key={uma.umaId}
+                className={uma.umaId === selectedUmaId ? 'draft-plan-card selected' : 'draft-plan-card'}
+              >
+                <button
+                  type="button"
+                  className="draft-plan-select"
+                  onClick={() => {
+                    onSelectUma(uma.umaId);
+                  }}
+                  title={`Show ${uma.name}`}
+                >
+                  <span className="draft-plan-portrait">
+                    <UmaImage imageUrl={uma.imageUrl} name={uma.name} />
+                  </span>
+                  <span>
+                    <strong>{uma.name}</strong>
+                    <small>
+                      {totalExperience}/{roster.players.length} {scopeLabel}
+                    </small>
+                    <small>{teamSummaries.join(' - ')}</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="draft-plan-remove"
+                  onClick={() => {
+                    onRemoveUma(uma.umaId);
+                  }}
+                  aria-label={`Remove ${uma.name} from draft plan`}
+                >
+                  x
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
@@ -746,8 +927,19 @@ function UmaPlanningPlayerSlot({
       {uma === undefined ? (
         <span>No games played</span>
       ) : (
-        <span>
-          {uma.matches} GP - {formatDecimal(uma.pointsPerGame)} PPG - {formatPercent(uma.winRate)}
+        <span className="uma-planning-stats">
+          <span>
+            <small>Games</small>
+            <b>{uma.matches}</b>
+          </span>
+          <span>
+            <small>PPG</small>
+            <b>{formatDecimal(uma.pointsPerGame)}</b>
+          </span>
+          <span>
+            <small>Win rate</small>
+            <b>{formatPercent(uma.winRate)}</b>
+          </span>
         </span>
       )}
     </li>
@@ -981,7 +1173,7 @@ function DraftPickExperiencePanel({
         <span>
           {action === undefined
             ? 'Waiting for picks'
-            : `${experienceCount} players with ${statsScope === 'currentSeason' ? 'seasonal' : 'all-time'} history`}
+            : `${experienceCount} players with ${formatStatsScopeShortLabel(statsScope)} history`}
         </span>
       </div>
       {action === undefined ? (
@@ -1791,6 +1983,22 @@ function getTeamGroups(roster: PrematchRoster | undefined): PrematchTeam[] {
   ];
 }
 
+function getRosterPlayersForHitScope(roster: PrematchRoster, hitScope: UmaCatalogHitScope): PrematchPlayer[] {
+  if (hitScope === 'all') {
+    return roster.players;
+  }
+
+  return getDraftRosterPlayersForTeam(roster, hitScope);
+}
+
+function getHitScopeLabel(hitScope: UmaCatalogHitScope): string {
+  if (hitScope === 'all') {
+    return 'total';
+  }
+
+  return hitScope === 'team1' ? 'Team 1' : 'Team 2';
+}
+
 function getDraftRosterPlayersForTeam(
   roster: PrematchRoster | undefined,
   teamId: TeamId
@@ -2437,7 +2645,7 @@ function formatScoringValue(pointsPerGame: number | null | undefined): string {
 }
 
 function formatStatsScopeShortLabel(statsScope: PlayerStatsScope): string {
-  return statsScope === 'currentSeason' ? 'seasonal' : 'all-time';
+  return statsScope === 'currentSeason' ? 'Seasonal' : 'All-time';
 }
 
 function formatWinRateDetail(winRate: number | null | undefined): string {
@@ -2577,18 +2785,6 @@ function getProfileSnapshotStatus(
   }
 
   return `Profile data updated ${formatRelativeAge(snapshot.updatedAt, now)}`;
-}
-
-function getStatsScopeDescription(statsScope: PlayerStatsScope): string {
-  return statsScope === 'currentSeason'
-    ? 'Showing current season stats'
-    : 'Showing all-time stats - rank is current season';
-}
-
-function getStatsScopeTooltip(statsScope: PlayerStatsScope): string {
-  return statsScope === 'currentSeason'
-    ? 'Record, scoring, most played, and best performing are from the current season.'
-    : 'Record, scoring, most played, and best performing use all-time ranked data. Rank still uses the current season leaderboard.';
 }
 
 function getProfileDataStatus(

@@ -20,3 +20,7 @@ export async function setLatestPrematchRoster(roster: PrematchRoster): Promise<v
     [LATEST_PREMATCH_ROSTER_STORAGE_KEY]: roster
   } satisfies LatestPrematchRosterStorage);
 }
+
+export async function clearLatestPrematchRoster(): Promise<void> {
+  await browser.storage.local.remove(LATEST_PREMATCH_ROSTER_STORAGE_KEY);
+}

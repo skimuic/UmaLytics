@@ -20,3 +20,7 @@ export async function setLatestDraftSnapshot(snapshot: DraftSnapshot): Promise<v
     [LATEST_DRAFT_SNAPSHOT_STORAGE_KEY]: snapshot
   } satisfies LatestDraftSnapshotStorage);
 }
+
+export async function clearLatestDraftSnapshot(): Promise<void> {
+  await browser.storage.local.remove(LATEST_DRAFT_SNAPSHOT_STORAGE_KEY);
+}

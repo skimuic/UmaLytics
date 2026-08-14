@@ -4,8 +4,8 @@ export default defineConfig({
   manifestVersion: 3,
   manifest: {
     name: 'UmaLytics',
-    version: '0.1.3',
-    version_name: '0.1.3-closed-beta.1',
+    version: '0.2.0',
+    version_name: '0.2.0-open-beta.1',
     description: 'Prematch scouting companion for Uma Drafter.',
     icons: {
       16: 'icon/16.png',

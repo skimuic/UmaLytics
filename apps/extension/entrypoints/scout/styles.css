@@ -30,6 +30,12 @@ body {
   overflow: hidden;
 }
 
+.scene-umas .app-header {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  padding-top: 10px;
+}
+
 .app-header {
   align-items: center;
   background: #0b1220;
@@ -66,12 +72,22 @@ body {
   margin-top: 2px;
 }
 
-.app-header .stats-scope-description {
-  color: #475569;
+.app-credits {
+  color: #64748b;
   font-size: 11px;
   font-weight: 700;
-  margin-top: 3px;
-  max-width: 320px;
+  line-height: 1.35;
+  margin: 3px 0 0;
+}
+
+.app-credits a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-credits a:hover {
+  color: #2563eb;
+  text-decoration: underline;
 }
 
 .scene-toggle {
@@ -731,18 +747,7 @@ body {
 .uma-search,
 .uma-sort {
   display: grid;
-  gap: 5px;
   min-width: 0;
-}
-
-.uma-search span,
-.uma-sort > span {
-  color: #64748b;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  text-transform: uppercase;
 }
 
 .uma-search input,
@@ -895,6 +900,42 @@ body {
   min-width: 0;
 }
 
+.uma-hit-scope {
+  display: grid;
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.uma-hit-scope-toggle {
+  background: #f8fafc;
+  border: 1px solid #d9e0ea;
+  border-radius: 999px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  height: 30px;
+  overflow: hidden;
+  padding: 2px;
+}
+
+.uma-hit-scope-toggle button {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: #64748b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.uma-hit-scope-toggle button.active {
+  background: #e0f2fe;
+  color: #075985;
+}
+
 .uma-catalog-grid {
   align-content: start;
   display: grid;
@@ -959,11 +1000,11 @@ body {
   color: inherit;
   cursor: pointer;
   display: grid;
-  grid-template-rows: 66px 42px;
   gap: 7px;
+  grid-template-rows: 66px auto;
   justify-items: center;
   min-width: 0;
-  min-height: 126px;
+  min-height: 134px;
   padding: 9px 6px;
   position: relative;
 }
@@ -1034,25 +1075,24 @@ body {
 
 .uma-catalog-name {
   align-self: start;
-  display: -webkit-box;
+  display: block;
   font-size: 11px;
   font-weight: 900;
   line-height: 13px;
   max-width: 100%;
   min-height: 39px;
-  overflow: hidden;
+  overflow: visible;
   overflow-wrap: anywhere;
   text-align: center;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  white-space: normal;
 }
 
 .uma-planning-panel {
-  align-content: start;
   display: grid;
-  gap: 14px;
-  grid-template-rows: auto auto;
-  padding: 16px;
+  gap: 12px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-height: 0;
+  padding: 14px;
 }
 
 .uma-planning-panel.empty {
@@ -1066,9 +1106,10 @@ body {
   border: 1px solid #e6ebf2;
   border-radius: 8px;
   display: grid;
-  gap: 16px;
-  grid-template-columns: 76px minmax(180px, 0.7fr) minmax(0, 1.3fr);
-  padding: 14px;
+  gap: 12px;
+  grid-template-columns: 68px minmax(220px, 0.78fr) minmax(0, 1.22fr);
+  min-height: 108px;
+  padding: 12px;
 }
 
 .uma-planning-portrait {
@@ -1077,10 +1118,10 @@ body {
   border: 1px solid #cbd5e1;
   border-radius: 9px;
   display: inline-flex;
-  height: 76px;
+  height: 68px;
   justify-content: center;
   overflow: hidden;
-  width: 76px;
+  width: 68px;
 }
 
 .uma-planning-portrait img {
@@ -1095,11 +1136,20 @@ body {
   font-weight: 900;
 }
 
+.uma-planning-title {
+  align-content: center;
+  display: grid;
+  min-width: 0;
+}
+
 .uma-planning-heading h3 {
-  font-size: 28px;
-  line-height: 1.15;
+  font-size: 22px;
+  line-height: 1.1;
   margin: 0;
+  min-width: 0;
+  overflow: visible;
   overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .uma-planning-heading p {
@@ -1107,6 +1157,28 @@ body {
   font-size: 12px;
   font-weight: 800;
   margin: 5px 0 0;
+}
+
+.uma-pin-button {
+  background: #e0f2fe;
+  border: 1px solid #7dd3fc;
+  border-radius: 999px;
+  color: #075985;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  margin-top: 8px;
+  padding: 5px 9px;
+}
+
+.uma-pin-button.pinned,
+.uma-pin-button:disabled {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+  cursor: default;
 }
 
 .uma-planning-summary {
@@ -1147,7 +1219,7 @@ body {
 .uma-planning-team-grid {
   align-content: start;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: repeat(2, auto);
   min-height: 0;
@@ -1155,10 +1227,10 @@ body {
 
 .uma-planning-team {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-template-rows: auto auto;
   min-height: 0;
-  padding: 13px;
+  padding: 11px;
 }
 
 .uma-planning-team.team1 {
@@ -1189,7 +1261,8 @@ body {
   font-size: 11px;
   font-weight: 800;
   margin: 0;
-  white-space: nowrap;
+  text-align: right;
+  white-space: normal;
 }
 
 .uma-planning-slots {
@@ -1207,10 +1280,11 @@ body {
   border: 1px solid #e6ebf2;
   border-radius: 8px;
   display: grid;
-  gap: 4px;
-  min-height: 92px;
+  gap: 7px;
+  grid-template-rows: 34px auto;
+  min-height: 112px;
   min-width: 0;
-  padding: 12px 10px;
+  padding: 10px;
 }
 
 .uma-planning-player:not(.empty):not(.no-history) {
@@ -1225,20 +1299,209 @@ body {
 
 .uma-planning-player strong,
 .uma-planning-player span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .uma-planning-player strong {
   font-size: 13px;
-  line-height: 16px;
+  line-height: 1.2;
+  min-height: 34px;
 }
 
 .uma-planning-player span {
   color: #64748b;
   font-size: 11px;
-  line-height: 14px;
+  line-height: 1.25;
+}
+
+.uma-planning-player > span:not(.uma-planning-stats) {
+  align-self: start;
+}
+
+.uma-planning-stats {
+  align-self: start;
+  display: grid;
+  gap: 3px;
+  margin-top: 0;
+}
+
+.uma-planning-stats span {
+  align-items: baseline;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 58px minmax(30px, 1fr);
+  min-width: 0;
+}
+
+.uma-planning-stats small {
+  color: #8aa0ba;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.uma-planning-stats b {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  justify-self: end;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.draft-plan-tray {
+  align-content: start;
+  background: #f8fafc;
+  border: 1px solid #e6ebf2;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  padding: 11px;
+}
+
+.draft-plan-tray header {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.draft-plan-tray h4 {
+  color: #17202a;
+  font-size: 16px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.draft-plan-tray p {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  margin: 3px 0 0;
+}
+
+.draft-plan-tray header > span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.draft-plan-empty {
+  align-items: center;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 78px;
+  padding: 12px;
+}
+
+.draft-plan-list {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(54px, auto));
+}
+
+.draft-plan-card {
+  background: #ffffff;
+  border: 1px solid #e6ebf2;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.draft-plan-card.selected {
+  border-color: #38bdf8;
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.22);
+}
+
+.draft-plan-select {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  min-width: 0;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.draft-plan-portrait {
+  align-items: center;
+  background: #edf2f7;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  overflow: hidden;
+  width: 38px;
+}
+
+.draft-plan-portrait img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.draft-plan-select span:last-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.draft-plan-select strong,
+.draft-plan-select small {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.draft-plan-select strong {
+  color: #17202a;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.draft-plan-select small {
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.draft-plan-remove {
+  align-self: start;
+  background: transparent;
+  border: 0;
+  color: #94a3b8;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 8px 8px 0 0;
+}
+
+.draft-plan-remove:hover {
+  color: #ef4444;
 }
 
 .player-detail-scene {
@@ -2278,7 +2541,7 @@ a.player-name:hover {
 
 .app-header p,
 .app-header .profile-freshness,
-.app-header .stats-scope-description,
+.app-credits,
 .team-header p,
 .player-id,
 .top-umas p,
@@ -2301,6 +2564,8 @@ a.player-name:hover {
 .uma-planning-summary span,
 .uma-planning-team,
 .uma-planning-player,
+.draft-plan-tray,
+.draft-plan-card,
 .detail-header,
 .detail-card,
 .detail-stat-panel,
@@ -2337,10 +2602,12 @@ a.player-name:hover {
 
 .uma-search input,
 .uma-sort-trigger,
+.uma-hit-scope-toggle,
 .uma-catalog-toolbar,
 .uma-catalog-empty,
 .uma-catalog-button,
-.uma-planning-player {
+.uma-planning-player,
+.draft-plan-empty {
   background: #0b1220;
   border-color: #263244;
   color: #dbe7f7;
@@ -2361,9 +2628,52 @@ a.player-name:hover {
   border-color: #334155;
 }
 
+.uma-hit-scope-toggle button {
+  color: #8f9bad;
+}
+
+.uma-hit-scope-toggle button.active {
+  background: #1f2a3a;
+  color: #7dd3fc;
+}
+
 .uma-planning-player:not(.empty):not(.no-history) {
   background: rgba(14, 165, 233, 0.1);
   border-color: rgba(56, 189, 248, 0.38);
+}
+
+.uma-planning-stats b {
+  color: #e5f3ff;
+}
+
+.uma-pin-button {
+  background: #102f45;
+  border-color: #0369a1;
+  color: #7dd3fc;
+}
+
+.uma-pin-button.pinned,
+.uma-pin-button:disabled {
+  background: #123a2a;
+  border-color: #15803d;
+  color: #86efac;
+}
+
+.draft-plan-card {
+  background: #0b1220;
+  border-color: #263244;
+}
+
+.draft-plan-card.selected {
+  background:
+    linear-gradient(90deg, rgba(56, 189, 248, 0.14), rgba(15, 23, 42, 0)),
+    #0b1220;
+  border-color: #38bdf8;
+}
+
+.draft-plan-portrait {
+  background: #111b2c;
+  border-color: #263244;
 }
 
 .uma-catalog-button.selected {
@@ -2451,6 +2761,8 @@ a.player-name:hover {
 .uma-planning-summary strong,
 .uma-planning-team h4,
 .uma-planning-player strong,
+.draft-plan-tray h4,
+.draft-plan-select strong,
 .detail-title h2,
 .team-header h2,
 .player-name,
@@ -2459,14 +2771,16 @@ a.player-name:hover {
   color: #d1d5db;
 }
 
-.uma-search span,
-.uma-sort > span,
 .uma-catalog-heading span,
 .uma-catalog-empty span,
 .uma-planning-heading p,
 .uma-planning-summary small,
 .uma-planning-team p,
-.uma-planning-player span {
+.uma-planning-player span,
+.draft-plan-tray p,
+.draft-plan-tray header > span,
+.draft-plan-empty,
+.draft-plan-select small {
   color: #8f9bad;
 }
 
@@ -2480,6 +2794,10 @@ a.player-name:hover {
 }
 
 a.player-name:hover {
+  color: #93c5fd;
+}
+
+.app-credits a:hover {
   color: #93c5fd;
 }
 
@@ -2784,7 +3102,6 @@ a.player-name:hover {
   color: #fbbf24;
 }
 
-
 @media (max-width: 1040px) {
   .surface-scout {
     min-width: 0;
@@ -2804,11 +3121,16 @@ a.player-name:hover {
     grid-template-columns: 76px minmax(0, 1fr);
   }
 
-  .uma-planning-summary {
-    grid-column: 1 / -1;
+  .uma-planning-heading h3 {
+    font-size: 22px;
   }
 
   .uma-planning-summary {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .draft-plan-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -2882,6 +3204,10 @@ a.player-name:hover {
   .draft-pick-experience-list {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: repeat(5, minmax(0, 1fr));
+  }
+
+  .draft-plan-list {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .uma-planning-team header {

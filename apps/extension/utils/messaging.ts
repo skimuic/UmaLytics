@@ -1,6 +1,11 @@
 import { browser } from 'wxt/browser';
 import type { DraftSnapshot, PrematchRoster } from '@umalytics/shared';
 
+export type LobbyReconnectResult = {
+  activeLobby: boolean;
+  matchCode?: string;
+};
+
 export type UmaLyticsMessage = {
   type: 'prematch-roster-detected';
   roster: PrematchRoster;
@@ -55,8 +60,8 @@ export async function sendProfileRefreshRequest(roster: PrematchRoster): Promise
   } satisfies UmaLyticsMessage);
 }
 
-export async function sendLobbyReconnectRequest(): Promise<void> {
-  await browser.runtime.sendMessage({
+export async function sendLobbyReconnectRequest(): Promise<LobbyReconnectResult | undefined> {
+  return browser.runtime.sendMessage({
     type: 'lobby-reconnect-requested'
   } satisfies UmaLyticsMessage);
 }

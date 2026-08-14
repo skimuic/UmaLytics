@@ -29,6 +29,7 @@ const RELEASE_VARIANTS_BY_OUTFIT_ID = new Map(
 interface ApiPlayerProfile {
   displayName?: string;
   discordUsername?: string;
+  nickname?: string | null;
   title?: string | null;
 }
 
@@ -241,7 +242,7 @@ async function fetchPlayerProfileSummary(
 
   return {
     discordId: player.discordId,
-    displayName: profile?.displayName ?? leaderboardEntry?.displayName ?? player.displayName,
+    displayName: getPreferredDisplayName(profile, leaderboardEntry, player),
     discordUsername: profile?.discordUsername,
     title: profile?.title ?? null,
     rank: leaderboardEntry?.rank ?? null,
@@ -269,6 +270,43 @@ async function fetchPlayerProfileSummary(
     profileUrl,
     error
   };
+}
+
+function getPreferredDisplayName(
+  profile: ApiPlayerProfile | undefined,
+  leaderboardEntry: ApiLeaderboardEntry | undefined,
+  player: PrematchPlayer
+): string {
+  return [
+    profile?.displayName,
+    profile?.nickname,
+    profile?.discordUsername,
+    leaderboardEntry?.displayName,
+    player.displayName
+  ].map(getUsableDisplayName).find((name) => name !== undefined) ?? player.displayName;
+}
+
+function getUsableDisplayName(value: string | null | undefined): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (trimmedValue.length === 0 || isPlaceholderDisplayName(trimmedValue)) {
+    return undefined;
+  }
+
+  return trimmedValue;
+}
+
+function isPlaceholderDisplayName(value: string): boolean {
+  const normalizedValue = value
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return normalizedValue === ', to view' || normalizedValue === 'to view' || normalizedValue === 'sign in to view';
 }
 
 async function fetchUmaMetadata(): Promise<UmaMetadataLookup> {

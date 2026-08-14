@@ -1,7 +1,7 @@
 import { browser } from 'wxt/browser';
 import type { ScriptPublicPath } from 'wxt/utils/inject-script';
 import type { PlayerProfileSummary, PrematchRoster } from '@umalytics/shared';
-import { isUmaLyticsMessage } from '../utils/messaging';
+import { isUmaLyticsMessage, type LobbyReconnectResult } from '../utils/messaging';
 import { fetchPlayerProfileSummaries } from '../utils/playerProfileApi';
 import {
   getPlayerProfileSummaries,
@@ -13,8 +13,13 @@ import {
   PROFILE_CACHE_TTL_MS,
   RECENT_HISTORY_VERSION
 } from '../utils/profileConstants';
-import { setLatestDraftSnapshot } from '../utils/draftStorage';
-import { getLatestPrematchRoster, setLatestPrematchRoster } from '../utils/rosterStorage';
+import { clearLatestDraftSnapshot, setLatestDraftSnapshot } from '../utils/draftStorage';
+import {
+  clearLatestPrematchRoster,
+  getLatestPrematchRoster,
+  setLatestPrematchRoster
+} from '../utils/rosterStorage';
+import { extractMatchCodeFromUrl } from '../utils/matchDetection';
 import { isHashedUmaAssetUrl } from '../utils/umaPortraits';
 
 const SCOUT_POPOUT_PATH = '/scout.html';
@@ -71,7 +76,7 @@ export default defineBackground(() => {
     }
 
     if (message.type === 'lobby-reconnect-requested') {
-      return reconnectActiveDrafterTab();
+      return handleLobbyReconnectRequested();
     }
 
     return undefined;
@@ -79,7 +84,7 @@ export default defineBackground(() => {
 });
 
 async function openScoutWindow(): Promise<void> {
-  await reconnectActiveDrafterTab();
+  await handleLobbyReconnectRequested();
 
   if (scoutWindowId !== undefined) {
     try {
@@ -110,17 +115,6 @@ async function reconnectOpenDrafterTabs(): Promise<void> {
   await Promise.all(tabs.map((tab) => injectContentScriptIntoTab(tab.id)));
 }
 
-async function reconnectActiveDrafterTab(): Promise<void> {
-  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-  const activeTab = tabs.find((tab) => tab.url?.startsWith('https://drafter.uma.guide/') === true);
-
-  if (activeTab === undefined) {
-    return;
-  }
-
-  await injectContentScriptIntoTab(activeTab.id);
-}
-
 async function injectContentScriptIntoTab(tabId: number | undefined): Promise<void> {
   if (tabId === undefined) {
     return;
@@ -136,10 +130,68 @@ async function injectContentScriptIntoTab(tabId: number | undefined): Promise<vo
   }
 }
 
+async function getActiveDrafterTab(): Promise<Browser.tabs.Tab | undefined> {
+  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+  const activeCurrentWindowTab = tabs.find((tab) => tab.url?.startsWith('https://drafter.uma.guide/') === true);
+
+  if (activeCurrentWindowTab !== undefined && getTabMatchCode(activeCurrentWindowTab) !== undefined) {
+    return activeCurrentWindowTab;
+  }
+
+  const drafterTabs = await browser.tabs.query({ url: DRAFTER_URL_PATTERN });
+
+  return (
+    drafterTabs.find((tab) => tab.active && getTabMatchCode(tab) !== undefined) ??
+    drafterTabs.find((tab) => getTabMatchCode(tab) !== undefined) ??
+    activeCurrentWindowTab ??
+    drafterTabs.find((tab) => tab.active) ??
+    drafterTabs[0]
+  );
+}
+
 async function handlePrematchRosterDetected(roster: PrematchRoster): Promise<void> {
   console.log(`[UmaLytics] Roster detected: ${roster.players.length} players`);
   await setLatestPrematchRoster(roster);
   await enrichRosterProfiles(roster);
+}
+
+async function handleLobbyReconnectRequested(): Promise<LobbyReconnectResult> {
+  const activeTab = await getActiveDrafterTab();
+  const activeMatchCode = getTabMatchCode(activeTab);
+  const cachedRoster = await getLatestPrematchRoster();
+
+  if (activeTab === undefined || activeMatchCode === undefined) {
+    await clearActiveLobbyState();
+    return { activeLobby: false };
+  }
+
+  if (cachedRoster !== undefined && cachedRoster.matchCode !== activeMatchCode) {
+    await clearActiveLobbyState();
+  }
+
+  await injectContentScriptIntoTab(activeTab.id);
+  return { activeLobby: true, matchCode: activeMatchCode };
+}
+
+async function clearActiveLobbyState(): Promise<void> {
+  enrichmentRunId += 1;
+  console.log('[UmaLytics] Active lobby reset');
+  await Promise.all([
+    clearLatestPrematchRoster(),
+    clearLatestDraftSnapshot()
+  ]);
+}
+
+function getTabMatchCode(tab: Browser.tabs.Tab | undefined): string | undefined {
+  if (tab?.url === undefined) {
+    return undefined;
+  }
+
+  try {
+    return extractMatchCodeFromUrl(tab.url);
+  } catch {
+    return undefined;
+  }
 }
 
 async function handleProfileRefreshRequested(roster: PrematchRoster): Promise<void> {
