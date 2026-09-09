@@ -51,7 +51,7 @@ Follow [INSTALL.md](INSTALL.md), using the generated folder instead of an extrac
 
 Development mode may launch a separate browser profile. For a manual check in your usual browser, use a production build and load it unpacked.
 
-The current Firefox build emits WXT warnings about a missing extension ID and `data_collection_permissions`. Build success does not establish Firefox installation or store-submission readiness; review the manifest requirements before distribution changes.
+The Firefox manifest declares the stable add-on ID `umalytics@kjunodev`. The current build still warns about `data_collection_permissions`; a declaration needs to reflect the actual transmitted data before store submission. Build success does not establish Firefox installation or store-submission readiness; review the manifest requirements before distribution changes.
 
 ## Manual verification
 
