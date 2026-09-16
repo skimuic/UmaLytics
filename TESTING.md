@@ -23,3 +23,7 @@ Fixtures and mocked network/browser dependencies are used for automated tests. R
 For normal-play reports, record the browser/version, extension version, whether the issue occurred in a starting room or draft, expected and actual behavior, and diagnostics copied promptly afterward. Review diagnostics before sharing. No special arranged beta lobby is required.
 
 The 0.3.9 suite includes 75 public tests covering companion/nickname identity, early room-event capture and replay, delayed room codes, empty initial assignment snapshots, and false captain-only DOM rosters. The final installed package still needs live long-duration verification.
+
+### Shared explorer layout regression checks
+
+The five tests in tests/explorer-scenes.test.mjs cover historical scene routing, roster cards, details, scoped styling, and portrait parity. Browser fixture evaluation at 1280x900 and 390x844 confirmed identical header, navigation, and scope-control rectangles across modes. History Lobby returns from player details; the catalog retained an internal scroll area (500px visible, 8774px content at desktop). Switching Profiles to All-time left History on Season. These are fixture-based UI checks, not an installed-extension session against a live lobby.

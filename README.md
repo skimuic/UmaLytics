@@ -20,7 +20,7 @@ UmaLytics opens a separate scouting window beside [Uma Drafter](https://drafter.
 
 ## What is included
 
-The development branch adds **Live / History / Profiles** navigation. History accepts a match code or match-page URL and displays the saved completed draft with the same maps, picks, bans and vetoes layout as Live. Profiles accepts a username, Discord ID or profile URL and opens single-player scouting details. These changes are not yet in the linked 0.3.9 downloads.
+The development branch adds **Live / History / Profiles** navigation in a fixed header. History accepts a match code or match-page URL and offers the same **Lobby / Draft / Umas** scenes as Live, including player details and matching pick portraits. Profiles accepts a username, Discord ID or profile URL and opens single-player scouting details. All modes use the header's **Season / All-time** control and retain their own scope selection. These changes are not yet in the linked 0.3.9 downloads.
 
 History keeps its selected match separate from the live lobby. Any accompanying player statistics are current, not historical snapshots. Name searches show selectable directory matches (up to 50); refine the name or use an exact ID if needed. Neither feature requires an active lobby. Results remain while switching views, but match/search selections reset when the scouting window closes. Unavailable saved drafts and API errors are shown explicitly.
 
