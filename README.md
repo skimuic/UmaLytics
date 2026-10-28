@@ -1,5 +1,7 @@
 # UmaLytics
 
+> **This repository has moved to [kjunodev/umalytics](https://github.com/kjunodev/umalytics).** Get new releases, report bugs and follow development there. This copy is archived and no longer updated.
+
 UmaLytics opens a separate scouting window beside [Uma Drafter](https://drafter.uma.guide). See the players in team slots, their available ranked statistics, and the confirmed live draft.
 
 **0.5.2 — manual installation and updates.**
